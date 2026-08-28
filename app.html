@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>marginalia — set your frame</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22marginalia%22,%22display%22:%22standalone%22,%22start_url%22:%22.%22,%22background_color%22:%22%23EDE6D3%22,%22theme_color%22:%22%237A3B34%22}">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+</style>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+// ---- EDIT THIS if your Worker URL changes ----
+const WORKER_BASE = "https://eframe.alliyaahmad3.workers.dev";
+
+const COLORS = {
+  ink: "#22241F", paper: "#EDE6D3", paperDeep: "#E2D9C0",
+  burgundy: "#7A3B34", burgundyDeep: "#5C2B26", sage: "#6B7F5E",
+  line: "#C9BEA0", faint: "#8A8368",
+};
+
+const MOCK_SHELF = [
+  { title: "Piranesi", author: "Susanna Clarke", thumb: "https://covers.openlibrary.org/b/isbn/9781635575637-M.jpg" },
+  { title: "The Left Hand of Darkness", author: "Ursula K. Le Guin", thumb: "https://covers.openlibrary.org/b/isbn/9780441478125-M.jpg" },
+  { title: "Convenience Store Woman", author: "Sayaka Murata", thumb: "https://covers.openlibrary.org/b/isbn/9780802128256-M.jpg" },
+  { title: "Braiding Sweetgrass", author: "Robin Wall Kimmerer", thumb: "https://covers.openlibrary.org/b/isbn/9781571313560-M.jpg" },
+];
+
+const MODES = [
+  { key: "reading", title: "currently reading", tagline: "the book on your nightstand", auto: false, live: true },
+  { key: "spotify", title: "now playing", tagline: "updates itself once connected", auto: true, live: false },
+  { key: "moon", title: "moon phase", tagline: "tonight's sky, calculated — no setup", auto: true, live: false },
+  { key: "weather", title: "today's weather", tagline: "your forecast, updates itself daily", auto: true, live: false },
+  { key: "nasa", title: "this day in space", tagline: "NASA's picture of the day, any date", auto: false, live: true },
+];
+
+function useDebounced(value, delay) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
+function getMoonPhase(date = new Date()) {
+  const synodic = 29.53058867;
+  const known = new Date(Date.UTC(2000, 0, 6, 18, 14));
+  const days = (date - known) / 86400000;
+  let phase = (days % synodic) / synodic;
+  if (phase < 0) phase += 1;
+  const names = ["new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "last quarter", "waning crescent"];
+  const idx = Math.round(phase * 8) % 8;
+  return { fraction: phase, name: names[idx] };
+}
+
+function MoonArt({ fraction }) {
+  const lit = Math.cos((fraction - 0.5) * 2 * Math.PI) * -1;
+  const clipPct = 50 + lit * 50;
+  return (
+    <div style={{ width: 96, height: 96, borderRadius: "50%", background: "#2A2C24", position: "relative", overflow: "hidden", margin: "0 auto" }}>
+      <div style={{ position: "absolute", top: 0, bottom: 0, left: lit >= 0 ? "0" : `${100 - clipPct}%`, right: lit >= 0 ? `${100 - clipPct}%` : "0", background: "#E2D9C0" }} />
+    </div>
+  );
+}
+
+function EinkPreview({ cover, title, author, quote, art, empty }) {
+  return (
+    <div style={{ background: "#3E2E1F", padding: "14px 14px 22px", borderRadius: 3, boxShadow: "0 18px 40px -18px rgba(0,0,0,0.55), 0 2px 0 rgba(255,255,255,0.06) inset", width: 200 }}>
+      <div style={{ background: "#F2EFE6", padding: 10, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 220, position: "relative", overflow: "hidden" }}>
+        {empty ? (
+          <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: COLORS.faint, fontSize: 12, textAlign: "center", letterSpacing: 0.3, padding: "0 10px" }}>no mode set yet</div>
+        ) : art ? (
+          <div style={{ width: "100%", padding: "20px 0" }}>{art}</div>
+        ) : (
+          <img src={cover} alt={title} style={{ width: "100%", display: "block", filter: "saturate(0.72) contrast(1.05) brightness(0.98)" }} onError={(e) => (e.target.style.display = "none")} />
+        )}
+      </div>
+      {!empty && (
+        <div style={{ marginTop: 10, textAlign: "center" }}>
+          <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: "#F2EFE6", fontSize: 11.5, fontWeight: 600, lineHeight: 1.3 }}>{title}</div>
+          {author && <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: "#C9BEA0", fontSize: 10.5, marginTop: 2 }}>{author}</div>}
+          {quote && quote.trim() && (
+            <>
+              <div style={{ width: 28, height: 1, background: "#5C4A38", margin: "10px auto 8px" }} />
+              <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", color: "#E2D4B8", fontSize: 11, lineHeight: 1.45, padding: "0 6px" }}>"{quote.trim()}"</div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StepDots({ step, total }) {
+  return (
+    <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 26 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{ width: i === step ? 18 : 6, height: 6, borderRadius: 3, background: i <= step ? COLORS.burgundy : COLORS.line, transition: "all 0.25s ease" }} />
+      ))}
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%", boxSizing: "border-box", padding: "13px 15px", fontSize: 15,
+  border: `1.5px solid ${COLORS.line}`, borderRadius: 4, background: "#FBF9F2",
+  color: COLORS.ink, outline: "none", fontFamily: "'Source Sans 3', sans-serif",
+};
+
+const btnStyle = (enabled) => ({
+  width: "100%", padding: "14px 16px", fontSize: 15, fontWeight: 600, border: "none",
+  borderRadius: 4, background: enabled ? COLORS.burgundy : COLORS.line, color: "#F2EFE6",
+  cursor: enabled ? "pointer" : "default",
+});
+
+function App() {
+  const [step, setStep] = useState(0);
+  const [frameId, setFrameId] = useState("");
+  const [mode, setMode] = useState(null);
+  const [chosen, setChosen] = useState(null);
+  const [pushed, setPushed] = useState(false);
+  const [pushErr, setPushErr] = useState("");
+
+  const [method, setMethod] = useState(null);
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounced(query, 450);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isbn, setIsbn] = useState("");
+  const [quote, setQuote] = useState("");
+
+  const [city, setCity] = useState("");
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherErr, setWeatherErr] = useState("");
+
+  const [nasaDate, setNasaDate] = useState("");
+  const [nasaLoading, setNasaLoading] = useState(false);
+  const [nasaErr, setNasaErr] = useState("");
+
+  useEffect(() => {
+    if (mode !== "reading" || method !== "search" || debouncedQuery.trim().length < 2) { setResults([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(debouncedQuery)}&maxResults=8`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const items = (data.items || [])
+          .filter((it) => it.volumeInfo && it.volumeInfo.imageLinks && it.volumeInfo.imageLinks.thumbnail)
+          .map((it) => ({ title: it.volumeInfo.title, author: (it.volumeInfo.authors || ["Unknown"]).join(", "), thumb: it.volumeInfo.imageLinks.thumbnail.replace("http://", "https://"), id: it.id }));
+        setResults(items);
+      })
+      .catch(() => setResults([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [debouncedQuery, method, mode]);
+
+  const submitFrameId = (e) => { e.preventDefault(); if (frameId.trim().length >= 4) setStep(1); };
+  const pickMode = (m) => { setMode(m.key); setChosen(null); setPushErr(""); setStep(2); };
+  const pickBook = (book) => { setChosen({ title: book.title, author: book.author, thumb: book.thumb }); setStep(3); };
+
+  const fetchMoon = () => {
+    const { fraction, name } = getMoonPhase(new Date());
+    setChosen({ title: name, author: "tonight", art: <MoonArt fraction={fraction} /> });
+    setStep(3);
+  };
+
+  const fetchWeather = async () => {
+    if (!city.trim()) return;
+    setWeatherLoading(true); setWeatherErr("");
+    try {
+      const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`).then((r) => r.json());
+      const place = geo.results && geo.results[0];
+      if (!place) throw new Error("not found");
+      const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code`).then((r) => r.json());
+      const temp = Math.round(wx.current.temperature_2m);
+      const code = wx.current.weather_code;
+      setChosen({ title: `${temp}°  ·  ${weatherLabel(code)}`, author: `${place.name}, ${place.country_code || ""}`, art: <div style={{ textAlign: "center", fontFamily: "'Fraunces', serif", fontSize: 40, color: "#3E2E1F" }}>{weatherGlyph(code)}</div> });
+      setStep(3);
+    } catch { setWeatherErr("couldn't find that city — try a different spelling"); }
+    finally { setWeatherLoading(false); }
+  };
+
+  const fetchNasa = async () => {
+    setNasaLoading(true); setNasaErr("");
+    try {
+      const dateParam = nasaDate ? `&date=${nasaDate}` : "";
+      const data = await fetch(`https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY${dateParam}`).then((r) => r.json());
+      if (data.media_type !== "image") throw new Error("video that day");
+      setChosen({ title: data.title, author: data.date, thumb: data.url });
+      setStep(3);
+    } catch { setNasaErr("no image for that date — NASA's demo key is also rate-limited, try again in a minute"); }
+    finally { setNasaLoading(false); }
+  };
+
+  const confirmPush = async () => {
+    setPushErr("");
+    if (!chosen.thumb) {
+      setPushErr("this mode doesn't have a real image yet — moon and weather need an image-generation step that isn't built. reading and NASA modes work for real right now.");
+      return;
+    }
+    setPushed(true);
+    try {
+      const res = await fetch(`${WORKER_BASE}/update/${frameId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: chosen.title, author: chosen.author || "", thumb: chosen.thumb, quote: mode === "reading" ? quote : "", mode }),
+      });
+      if (!res.ok) throw new Error("bad response");
+      setTimeout(() => setStep(4), 400);
+    } catch {
+      setPushed(false);
+      setPushErr("couldn't reach the backend — check the connection and try again");
+    }
+  };
+
+  const reset = () => {
+    setChosen(null); setPushed(false); setMode(null); setQuery(""); setResults([]);
+    setMethod(null); setQuote(""); setCity(""); setWeatherErr(""); setNasaErr(""); setPushErr(""); setStep(1);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.paper, fontFamily: "'Source Sans 3', sans-serif", color: COLORS.ink, display: "flex", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 440, padding: "36px 22px 60px" }}>
+        <div style={{ textAlign: "center", marginBottom: 30 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 26, letterSpacing: -0.3 }}>marginalia</div>
+          <div style={{ fontSize: 13, color: COLORS.faint, marginTop: 4, letterSpacing: 0.2 }}>set what your frame shows</div>
+        </div>
+
+        {step > 0 && <StepDots step={step - 1} total={4} />}
+
+        {step === 0 && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}><EinkPreview empty /></div>
+            <form onSubmit={submitFrameId}>
+              <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>your frame's code — on the sticker, or hold the key button to see it on screen</label>
+              <input value={frameId} onChange={(e) => setFrameId(e.target.value.toUpperCase())} placeholder="e.g.  A7X9K2" style={{ ...inputStyle, fontFamily: "'Fraunces', serif", fontSize: 18, letterSpacing: 2, padding: "14px 16px" }} />
+              <button type="submit" disabled={frameId.trim().length < 4} style={{ ...btnStyle(frameId.trim().length >= 4), marginTop: 14 }}>continue</button>
+            </form>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div>
+            <p style={{ fontSize: 13, color: COLORS.faint, marginBottom: 18, textAlign: "center" }}>frame <b style={{ color: COLORS.ink }}>{frameId}</b> — what should it show?</p>
+            {MODES.map((m) => (
+              <button key={m.key} onClick={() => pickMode(m)} style={{ width: "100%", textAlign: "left", padding: "16px 18px", marginBottom: 10, background: "#FBF9F2", border: `1.5px solid ${COLORS.line}`, borderRadius: 5, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600 }}>{m.title}</div>
+                  <div style={{ fontSize: 12, color: COLORS.faint, marginTop: 2 }}>{m.tagline}</div>
+                </div>
+                {!m.live && <div style={{ fontSize: 10, color: COLORS.faint, fontWeight: 600, letterSpacing: 0.3, border: `1px solid ${COLORS.line}`, borderRadius: 20, padding: "3px 8px" }}>preview only</div>}
+                {m.live && m.auto && <div style={{ fontSize: 10, color: COLORS.sage, fontWeight: 600, letterSpacing: 0.3, border: `1px solid ${COLORS.sage}`, borderRadius: 20, padding: "3px 8px" }}>auto</div>}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {step === 2 && mode === "reading" && (
+          <div>
+            {[{ key: "search", title: "search by title", sub: "look up any book, pick the edition" },
+              { key: "shelf", title: "from my shelf", sub: "books already in your imported library" },
+              { key: "isbn", title: "enter ISBN", sub: "the number under the barcode on the back" }].map((opt) => (
+              <button key={opt.key} onClick={() => { setMethod(opt.key); setResults([]); }} style={{ width: "100%", textAlign: "left", padding: "16px 18px", marginBottom: 10, background: method === opt.key ? COLORS.paperDeep : "#FBF9F2", border: `1.5px solid ${method === opt.key ? COLORS.burgundy : COLORS.line}`, borderRadius: 5, cursor: "pointer" }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600 }}>{opt.title}</div>
+                <div style={{ fontSize: 12, color: COLORS.faint, marginTop: 2 }}>{opt.sub}</div>
+              </button>
+            ))}
+            {method === "search" && (
+              <div style={{ marginTop: 14 }}>
+                <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="title or author..." style={{ ...inputStyle, marginBottom: 12 }} />
+                {loading && <div style={{ fontSize: 12.5, color: COLORS.faint, textAlign: "center", padding: 10 }}>searching…</div>}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{results.map((b) => <BookCard key={b.id} book={b} onPick={pickBook} />)}</div>
+              </div>
+            )}
+            {method === "shelf" && (
+              <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{MOCK_SHELF.map((b) => <BookCard key={b.title} book={b} onPick={pickBook} />)}</div>
+            )}
+            {method === "isbn" && (
+              <div style={{ marginTop: 14 }}>
+                <input autoFocus value={isbn} onChange={(e) => setIsbn(e.target.value.replace(/[^0-9Xx]/g, ""))} placeholder="9780000000000" inputMode="numeric" style={{ ...inputStyle, marginBottom: 10 }} />
+                <button disabled={isbn.length < 8} onClick={() => pickBook({ title: "book from ISBN " + isbn, author: "matched from barcode", thumb: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg` })} style={btnStyle(isbn.length >= 8)}>find this book</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 2 && mode === "spotify" && (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>this mode needs a one-time Spotify login — after that, your frame updates on its own with whatever's playing, no manual step.</p>
+            <button onClick={() => { setChosen({ title: "Sample Track", author: "Sample Artist — demo preview", art: <div style={{ textAlign: "center", fontFamily: "'Fraunces', serif", fontSize: 13, color: COLORS.faint }}>album art will appear here once connected</div> }); setStep(3); }} style={btnStyle(true)}>connect Spotify (preview)</button>
+            <p style={{ fontSize: 11.5, color: COLORS.faint, marginTop: 14 }}>real login isn't wired up yet</p>
+          </div>
+        )}
+
+        {step === 2 && mode === "moon" && (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>no setup needed — this one's calculated from tonight's date automatically.</p>
+            <button onClick={fetchMoon} style={btnStyle(true)}>show tonight's moon</button>
+          </div>
+        )}
+
+        {step === 2 && mode === "weather" && (
+          <div>
+            <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>which city should it track?</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Dallas" style={{ ...inputStyle, marginBottom: 12 }} />
+            {weatherErr && <div style={{ fontSize: 12, color: COLORS.burgundy, marginBottom: 10 }}>{weatherErr}</div>}
+            <button onClick={fetchWeather} disabled={!city.trim() || weatherLoading} style={btnStyle(!!city.trim() && !weatherLoading)}>{weatherLoading ? "checking…" : "get today's weather"}</button>
+          </div>
+        )}
+
+        {step === 2 && mode === "nasa" && (
+          <div>
+            <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>a date (birthday, anniversary, today) — leave blank for today</label>
+            <input type="date" value={nasaDate} onChange={(e) => setNasaDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+            {nasaErr && <div style={{ fontSize: 12, color: COLORS.burgundy, marginBottom: 10 }}>{nasaErr}</div>}
+            <button onClick={fetchNasa} disabled={nasaLoading} style={btnStyle(!nasaLoading)}>{nasaLoading ? "fetching…" : "find that day's image"}</button>
+          </div>
+        )}
+
+        {step === 3 && chosen && (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <EinkPreview cover={chosen.thumb} title={chosen.title} author={chosen.author} art={chosen.art} quote={mode === "reading" ? quote : null} />
+            </div>
+            {mode === "reading" && (
+              <div style={{ textAlign: "left", marginBottom: 18 }}>
+                <label style={{ display: "block", fontSize: 12, color: COLORS.faint, marginBottom: 6 }}>a line worth keeping, so far — optional</label>
+                <textarea value={quote} onChange={(e) => setQuote(e.target.value.slice(0, 100))} placeholder='"..."' rows={2} style={{ ...inputStyle, fontFamily: "'Fraunces', serif", fontStyle: "italic", resize: "none" }} />
+                <div style={{ fontSize: 10.5, color: COLORS.faint, textAlign: "right", marginTop: 4 }}>{quote.length}/100</div>
+              </div>
+            )}
+            {pushErr && <div style={{ fontSize: 12.5, color: COLORS.burgundy, marginBottom: 14, textAlign: "left", background: COLORS.paperDeep, padding: "10px 12px", borderRadius: 4 }}>{pushErr}</div>}
+            <p style={{ fontSize: 13, color: COLORS.faint, marginBottom: 20 }}>this is what frame <b style={{ color: COLORS.ink }}>{frameId}</b> will show — redraw takes about 15–30 seconds</p>
+            <button onClick={confirmPush} disabled={pushed} style={{ ...btnStyle(!pushed), background: pushed ? COLORS.sage : COLORS.burgundy, marginBottom: 10 }}>{pushed ? "sending to frame…" : "set this"}</button>
+            <button onClick={() => setStep(2)} style={{ width: "100%", padding: "12px 16px", fontSize: 13.5, border: "none", background: "transparent", color: COLORS.faint, cursor: "pointer", textDecoration: "underline" }}>choose something else</button>
+          </div>
+        )}
+
+        {step === 4 && chosen && (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+              <EinkPreview cover={chosen.thumb} title={chosen.title} author={chosen.author} art={chosen.art} quote={mode === "reading" ? quote : null} />
+            </div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.sage, marginBottom: 4 }}>sent to your frame</div>
+            <p style={{ fontSize: 12.5, color: COLORS.faint, marginBottom: 24, lineHeight: 1.5 }}>next time, skip the code — just open this from your home screen.</p>
+            <button onClick={reset} style={{ width: "100%", padding: "13px 16px", fontSize: 14, fontWeight: 600, border: `1.5px solid ${COLORS.burgundy}`, borderRadius: 4, background: "transparent", color: COLORS.burgundy, cursor: "pointer" }}>change mode or book</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function weatherLabel(code) {
+  if (code === 0) return "clear";
+  if ([1, 2, 3].includes(code)) return "partly cloudy";
+  if ([45, 48].includes(code)) return "foggy";
+  if ([51, 53, 55, 61, 63, 65].includes(code)) return "rainy";
+  if ([71, 73, 75].includes(code)) return "snowy";
+  if ([95, 96, 99].includes(code)) return "stormy";
+  return "overcast";
+}
+function weatherGlyph(code) {
+  if (code === 0) return "○";
+  if ([1, 2, 3].includes(code)) return "◐";
+  if ([45, 48].includes(code)) return "≈";
+  if ([51, 53, 55, 61, 63, 65].includes(code)) return "⁝";
+  if ([71, 73, 75].includes(code)) return "❋";
+  if ([95, 96, 99].includes(code)) return "⚡";
+  return "☁";
+}
+
+function BookCard({ book, onPick }) {
+  return (
+    <button onClick={() => onPick(book)} style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: 10, background: "#FBF9F2", border: `1.5px solid ${COLORS.line}`, borderRadius: 5, cursor: "pointer", textAlign: "center" }}>
+      <img src={book.thumb} alt={book.title} style={{ width: "100%", maxHeight: 130, objectFit: "contain", marginBottom: 8 }} onError={(e) => (e.target.style.opacity = 0.15)} />
+      <div style={{ fontSize: 11.5, fontWeight: 600, lineHeight: 1.3 }}>{book.title}</div>
+      <div style={{ fontSize: 10, color: COLORS.faint, marginTop: 2 }}>{book.author}</div>
+    </button>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

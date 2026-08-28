@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Marginalia — a frame for what you're reading</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,340..700,0..1&family=Source+Serif+4:wght@400;500&family=Source+Sans+3:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#22241F;
+    --paper:#EDE6D3;
+    --paper-deep:#E2D9C0;
+    --paper-warm:#F4EFE0;
+    --burgundy:#7A3B34;
+    --burgundy-deep:#5C2B26;
+    --sage:#6B7F5E;
+    --line:#C9BEA0;
+    --faint:#786F52;
+    --wood:#3E2E1F;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Source Sans 3', sans-serif;
+    font-size:17px;
+    line-height:1.55;
+  }
+  h1,h2,h3, .display{
+    font-family:'Fraunces', serif;
+    font-weight:560;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+  a{ color:inherit; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 28px; }
+
+  /* faint paper-grain texture, no gradients */
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    opacity:0.5;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(34,36,31,0.045) 1px, transparent 0);
+    background-size: 3px 3px;
+  }
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky; top:0; z-index:20;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding-top:18px; padding-bottom:18px;
+  }
+  .wordmark{
+    font-family:'Fraunces', serif;
+    font-weight:600; font-style:italic;
+    font-size:22px;
+    letter-spacing:-0.01em;
+  }
+  nav .links{ display:flex; gap:28px; font-size:14.5px; }
+  nav .links a{ text-decoration:none; border-bottom:1px solid transparent; padding-bottom:2px; }
+  nav .links a:hover{ border-bottom-color:var(--ink); }
+
+  /* ---------- hero ---------- */
+  header.hero{ position:relative; z-index:1; padding:64px 0 40px; }
+  .hero-grid{
+    display:grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap:56px;
+    align-items:center;
+  }
+  .kicker{
+    font-size:13px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--burgundy); font-weight:600; margin-bottom:18px;
+  }
+  h1.headline{
+    font-size:clamp(38px, 5vw, 58px);
+    line-height:1.04;
+  }
+  h1.headline em{ font-style:italic; color:var(--burgundy); }
+  .sub{
+    margin-top:22px; max-width:46ch;
+    font-family:'Source Serif 4', serif;
+    font-size:19px; color:#3A3B33; line-height:1.6;
+  }
+  .cta-row{ margin-top:34px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .btn{
+    display:inline-block; padding:14px 26px; font-size:15px; font-weight:600;
+    text-decoration:none; border-radius:3px; border:1.5px solid var(--burgundy);
+    font-family:'Source Sans 3', sans-serif;
+  }
+  .btn.solid{ background:var(--burgundy); color:var(--paper-warm); }
+  .btn.solid:hover{ background:var(--burgundy-deep); }
+  .btn.ghost{ background:transparent; color:var(--burgundy); }
+  .deposit-note{ font-size:13.5px; color:var(--faint); }
+
+  /* frame mock — custom, drawn in CSS, not a stock photo or icon */
+  .frame-mock-wrap{ display:flex; justify-content:center; }
+  .frame-mock{
+    background:var(--wood);
+    padding:16px 16px 26px;
+    width:260px;
+    transform: rotate(-1.4deg);
+    box-shadow: 0 24px 50px -22px rgba(0,0,0,0.5);
+  }
+  .frame-screen{
+    background:#F2EFE6; padding:14px; min-height:280px;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+  }
+  .frame-cover{
+    width:100%; aspect-ratio:2/3;
+    background:
+      linear-gradient(180deg, #8C6B4F 0%, #8C6B4F 55%, #C9B18C 55%, #C9B18C 100%);
+    position:relative;
+    filter: saturate(0.7) contrast(1.05);
+  }
+  .frame-cover::after{
+    content:"";
+    position:absolute; left:14%; right:14%; top:18%; bottom:38%;
+    border:1.5px solid rgba(34,36,31,0.35);
+  }
+  .frame-caption{ margin-top:12px; text-align:center; }
+  .frame-caption .t{ font-family:'Fraunces', serif; font-weight:600; font-size:12px; color:#F2EFE6; }
+  .frame-caption .a{ font-size:10.5px; color:#C9BEA0; margin-top:2px; }
+  .frame-caption .q{
+    font-family:'Fraunces', serif; font-style:italic; font-size:10.5px;
+    color:#E2D4B8; margin-top:9px; padding:0 8px; line-height:1.4;
+  }
+
+  /* ---------- section: the actual problem, in prose ---------- */
+  section.note{ position:relative; z-index:1; padding:70px 0; }
+  .note .wrap{ max-width:680px; }
+  .note p{ font-family:'Source Serif 4', serif; font-size:19px; line-height:1.72; color:#33352C; }
+  .note p + p{ margin-top:20px; }
+  .note .sign{
+    margin-top:30px; font-family:'Fraunces', serif; font-style:italic; font-size:16px; color:var(--faint);
+  }
+
+  hr.rule{ border:none; border-top:1px solid var(--line); margin:0; }
+
+  /* ---------- how it works — asymmetric, not a 3-card row ---------- */
+  section.how{ position:relative; z-index:1; padding:70px 0; }
+  .how-head{ max-width:520px; margin-bottom:56px; }
+  .how-head h2{ font-size:clamp(28px,3.4vw,38px); }
+  .step{
+    display:grid;
+    grid-template-columns: 90px 1fr;
+    gap:26px;
+    padding:34px 0;
+    border-top:1px solid var(--line);
+  }
+  .step:last-child{ border-bottom:1px solid var(--line); }
+  .step .num{
+    font-family:'Fraunces', serif; font-size:44px; font-weight:400; font-style:italic;
+    color:var(--burgundy); line-height:1;
+  }
+  .step h3{ font-size:22px; margin-bottom:8px; }
+  .step p{ color:#3A3B33; max-width:52ch; }
+  .step:nth-child(2){ padding-left:0; }
+  .step:nth-child(3) .num, .step:nth-child(1) .num{ opacity:0.85; }
+
+  /* ---------- pull quote ---------- */
+  section.pull{ position:relative; z-index:1; padding:20px 0 76px; }
+  .pull blockquote{
+    margin:0; font-family:'Fraunces', serif; font-weight:400; font-style:italic;
+    font-size:clamp(24px, 3vw, 34px); line-height:1.4; color:var(--burgundy-deep);
+    border-left:2px solid var(--burgundy); padding-left:28px;
+  }
+
+  /* ---------- honest FAQ, plain text, no icons ---------- */
+  section.faq{ position:relative; z-index:1; padding:70px 0; background:var(--paper-deep); }
+  .faq h2{ font-size:clamp(26px,3vw,34px); margin-bottom:40px; }
+  .qa{ padding:24px 0; border-top:1px solid var(--line); max-width:720px; }
+  .qa:last-child{ border-bottom:1px solid var(--line); }
+  .qa .q{ font-weight:600; font-size:17px; margin-bottom:8px; font-family:'Fraunces', serif; }
+  .qa .a{ color:#3A3B33; max-width:60ch; }
+
+  /* ---------- reserve / pricing, single honest offer ---------- */
+  section.reserve{ position:relative; z-index:1; padding:80px 0 90px; }
+  .reserve-box{
+    border:1.5px solid var(--ink);
+    padding:44px;
+    display:grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap:40px;
+    align-items:center;
+  }
+  .reserve-box h2{ font-size:clamp(26px,3vw,32px); margin-bottom:14px; }
+  .reserve-box p{ color:#3A3B33; max-width:44ch; }
+  .price-block{ text-align:left; border-left:1px solid var(--line); padding-left:36px; }
+  .price-block .amount{ font-family:'Fraunces', serif; font-size:46px; font-weight:600; }
+  .price-block .toward{ font-size:13.5px; color:var(--faint); margin-top:2px; }
+  .price-block .btn{ margin-top:18px; width:100%; text-align:center; }
+  .price-block .fine{ font-size:12.5px; color:var(--faint); margin-top:12px; }
+
+  /* ---------- footer, real disclosure links, not omitted ---------- */
+  footer{ position:relative; z-index:1; padding:40px 0 60px; border-top:1px solid var(--line); }
+  footer .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; align-items:center; }
+  footer .fmark{ font-family:'Fraunces', serif; font-style:italic; font-size:16px; }
+  footer .flinks{ display:flex; gap:22px; font-size:13.5px; color:var(--faint); }
+  footer .flinks a{ text-decoration:none; }
+  footer .flinks a:hover{ color:var(--ink); }
+  footer .fnote{ font-size:12.5px; color:var(--faint); margin-top:16px; max-width:640px; }
+
+  @media (max-width: 820px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .frame-mock-wrap{ order:-1; margin-bottom:10px; }
+    .reserve-box{ grid-template-columns:1fr; }
+    .price-block{ border-left:none; border-top:1px solid var(--line); padding-left:0; padding-top:26px; }
+    .step{ grid-template-columns:56px 1fr; }
+    .step .num{ font-size:32px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="wordmark">marginalia</div>
+    <div class="links">
+      <a href="#how">how it works</a>
+      <a href="#faq">questions</a>
+      <a href="#reserve">reserve</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="kicker">a shelf, updated by hand</div>
+      <h1 class="headline">show what you're<br><em>currently reading</em>,<br>not what you watched.</h1>
+      <p class="sub">A small e-paper frame that shows the cover of whatever book is on your nightstand right now. You update it in about ten seconds when you start something new — no app, no account, no syncing that doesn't exist.</p>
+      <div class="cta-row">
+        <a class="btn solid" href="#reserve">reserve yours — $40</a>
+        <a class="btn ghost" href="#how">see how it works</a>
+      </div>
+      <div class="deposit-note" style="margin-top:14px;">refundable deposit, toward $180 total. first batch ships this winter.</div>
+    </div>
+    <div class="frame-mock-wrap">
+      <div class="frame-mock">
+        <div class="frame-screen">
+          <div class="frame-cover"></div>
+          <div class="frame-caption">
+            <div class="t">Piranesi</div>
+            <div class="a">Susanna Clarke</div>
+            <div class="q">"the beauty of the house is immeasurable..."</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<hr class="rule" />
+
+<section class="note">
+  <div class="wrap">
+    <p>Goodreads doesn't have an API anymore. Neither does StoryGraph, or Fable. So nothing can automatically know what you're reading — not this, not anything. We stopped pretending that was solvable and built around it instead.</p>
+    <p>You tell the frame what's on your nightstand the same way you'd tell a friend — quick, when it's true, not tracked in the background. It's less "smart home device" and more a small ritual, the same as moving a bookmark.</p>
+    <div class="sign">— built by someone who was tired of nightstand photos looking worse than the books deserved</div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="how-head">
+      <h2>three steps. no app to install.</h2>
+    </div>
+
+    <div class="step">
+      <div class="num">1</div>
+      <div>
+        <h3>scan the code on the back</h3>
+        <p>Once. It opens a plain page in your phone's browser — nothing to download, nothing to log into.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <h3>find the book</h3>
+        <p>Scan the barcode on the back cover, pick from your own shelf if you've imported one, or just search the title. Whichever's fastest for the book in your hand.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <div>
+        <h3>it redraws — slowly, on purpose</h3>
+        <p>The screen takes about fifteen seconds to change, the same way turning a page does. Add a line you liked so far, if you want. It'll sit there until you change it again.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pull">
+  <div class="wrap">
+    <blockquote>it doesn't need to know everything you've read. it only needs to know what you're holding right now.</blockquote>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<section class="faq" id="faq">
+  <div class="wrap">
+    <h2>the honest questions</h2>
+
+    <div class="qa">
+      <div class="q">does it sync automatically with Goodreads or StoryGraph?</div>
+      <div class="a">No. There's no live API for either — this isn't a corner we cut, it doesn't exist to cut. You update it yourself in about ten seconds, which turns out to be about as accurate anyway.</div>
+    </div>
+    <div class="qa">
+      <div class="q">what happens if I lose the QR sticker?</div>
+      <div class="a">Hold the button on the back of the frame — it'll show its setup code on screen. You can also type the code in by hand if the sticker's long gone.</div>
+    </div>
+    <div class="qa">
+      <div class="q">why does the screen take so long to change?</div>
+      <div class="a">It's e-paper, the same family of screen as an e-reader — no backlight, holds an image with almost no power. That's the tradeoff: it looks like paper, but it isn't built for anything fast.</div>
+    </div>
+    <div class="qa">
+      <div class="q">is my library data sold or shared?</div>
+      <div class="a">No. What you set is stored to run the frame, nothing else. Full terms and a plain-language privacy note are linked below before you ever put down a deposit.</div>
+    </div>
+  </div>
+</section>
+
+<section class="reserve" id="reserve">
+  <div class="wrap">
+    <div class="reserve-box">
+      <div>
+        <h2>reserve the first run</h2>
+        <p>A small first batch, built and shipped in order. The deposit is refundable any time before it ships — this is a reservation, not a purchase.</p>
+      </div>
+      <div class="price-block">
+        <div class="amount">$35</div>
+        <div class="toward">deposit, toward $135 total</div>
+        <a class="btn solid" href="#">reserve my spot</a>
+        <div class="fine">no charge beyond the deposit until your frame ships</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="flex-direction:column; align-items:flex-start;">
+    <div class="wrap" style="padding:0; width:100%; display:flex; justify-content:space-between; align-items:center;">
+      <div class="fmark">marginalia</div>
+      <div class="flinks">
+        <a href="#">privacy</a>
+        <a href="#">terms</a>
+        <a href="mailto:hello@example.com">contact</a>
+      </div>
+    </div>
+    <div class="fnote">a small, independently built object for readers. not affiliated with Goodreads, StoryGraph, or Fable — none of them offer the kind of access this would need, which is the whole reason this exists as a separate thing you update yourself.</div>
+  </div>
+</footer>
+
+</body>
+</html>
