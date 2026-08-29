@@ -8,10 +8,10 @@
  * Three routes:
  *  - POST /update/:frameId        <- webpage calls this when someone picks a book
  *  - GET  /frame/:frameId         <- the PHYSICAL FRAME's firmware points its
- *                                     "Auto Rotate URL" setting here. Returns a
- *                                     302 redirect straight to the image — the
- *                                     firmware fetches, dithers, and displays it.
- *                                     No JSON here on purpose: it just wants an image.
+ *                                     "Auto Rotate URL" setting here. FETCHES the
+ *                                     actual image server-side and streams the bytes
+ *                                     back directly — no redirect, since some
+ *                                     firmware HTTP clients don't follow 302s.
  *  - GET  /frame/:frameId/meta    <- full JSON (title/author/quote), for OUR
  *                                     webpage's own preview screen only.
  *
@@ -68,8 +68,9 @@ export default {
     }
 
     // GET /frame/:frameId  -> what the PHYSICAL FRAME's firmware polls.
-    // Redirects straight to the image so its own URL-Rotation fetcher
-    // (ETag caching, dithering, calibration) can do its job.
+    // Fetches the actual image server-side and streams the bytes back —
+    // no redirect, so it works even if the firmware's HTTP client
+    // doesn't follow 302s (this was causing ESP_FAIL on the device).
     const frameMatch = url.pathname.match(/^\/frame\/([A-Za-z0-9]{4,12})$/);
     if (frameMatch && request.method === "GET") {
       const frameId = frameMatch[1].toUpperCase();
@@ -78,7 +79,18 @@ export default {
         return json({ error: "no book set yet for this frame" }, 404, cors);
       }
       const record = JSON.parse(stored);
-      return Response.redirect(record.thumb, 302);
+      let imgResp;
+      try {
+        imgResp = await fetch(record.thumb);
+      } catch {
+        return json({ error: "could not reach image source" }, 502, cors);
+      }
+      if (!imgResp.ok) {
+        return json({ error: "image source returned an error" }, 502, cors);
+      }
+      const headers = new Headers(cors);
+      headers.set("Content-Type", imgResp.headers.get("Content-Type") || "image/jpeg");
+      return new Response(imgResp.body, { status: 200, headers });
     }
 
     return json({ error: "not found" }, 404, cors);
