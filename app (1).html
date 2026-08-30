@@ -125,8 +125,15 @@ const btnStyle = (enabled) => ({
 });
 
 function App() {
+  // A QR code can link straight to ?frame=FRAME02 — that takes priority
+  // over anything already remembered, so scanning a different unit's
+  // sticker always switches to that frame.
+  const urlFrame = new URLSearchParams(window.location.search).get("frame");
+  if (urlFrame && urlFrame.trim().length >= 4) {
+    localStorage.setItem("marginalia_frame_id", urlFrame.trim().toUpperCase());
+  }
+
   const [step, setStep] = useState(() => {
-    // If a frame code was remembered from a previous visit, skip straight past it
     return localStorage.getItem("marginalia_frame_id") ? 1 : 0;
   });
   const [frameId, setFrameId] = useState(() => localStorage.getItem("marginalia_frame_id") || "");
