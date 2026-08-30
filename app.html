@@ -125,8 +125,11 @@ const btnStyle = (enabled) => ({
 });
 
 function App() {
-  const [step, setStep] = useState(0);
-  const [frameId, setFrameId] = useState("");
+  const [step, setStep] = useState(() => {
+    // If a frame code was remembered from a previous visit, skip straight past it
+    return localStorage.getItem("marginalia_frame_id") ? 1 : 0;
+  });
+  const [frameId, setFrameId] = useState(() => localStorage.getItem("marginalia_frame_id") || "");
   const [mode, setMode] = useState(null);
   const [chosen, setChosen] = useState(null);
   const [pushed, setPushed] = useState(false);
@@ -166,7 +169,8 @@ function App() {
     return () => { cancelled = true; };
   }, [debouncedQuery, method, mode]);
 
-  const submitFrameId = (e) => { e.preventDefault(); if (frameId.trim().length >= 4) setStep(1); };
+  const submitFrameId = (e) => { e.preventDefault(); if (frameId.trim().length >= 4) { localStorage.setItem("marginalia_frame_id", frameId.trim()); setStep(1); } };
+  const forgetFrame = () => { localStorage.removeItem("marginalia_frame_id"); setFrameId(""); setStep(0); };
   const pickMode = (m) => { setMode(m.key); setChosen(null); setPushErr(""); setStep(2); };
   const pickBook = (book) => { setChosen({ title: book.title, author: book.author, thumb: book.thumb }); setStep(3); };
 
@@ -264,6 +268,7 @@ function App() {
                 {m.live && m.auto && <div style={{ fontSize: 10, color: COLORS.sage, fontWeight: 600, letterSpacing: 0.3, border: `1px solid ${COLORS.sage}`, borderRadius: 20, padding: "3px 8px" }}>auto</div>}
               </button>
             ))}
+            <button onClick={forgetFrame} style={{ width: "100%", padding: "10px", fontSize: 12.5, border: "none", background: "transparent", color: COLORS.faint, cursor: "pointer", textDecoration: "underline", marginTop: 6 }}>not your frame? switch codes</button>
           </div>
         )}
 
