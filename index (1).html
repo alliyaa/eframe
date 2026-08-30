@@ -12,8 +12,8 @@
     --paper:#EDE6D3;
     --paper-deep:#E2D9C0;
     --paper-warm:#F4EFE0;
-    --burgundy:#7A3B34;
-    --burgundy-deep:#5C2B26;
+    --burgundy:#450C3F;
+    --burgundy-deep:#2E0829;
     --sage:#6B7F5E;
     --line:#C9BEA0;
     --faint:#786F52;
@@ -228,7 +228,7 @@
     <div class="links">
       <a href="#how">how it works</a>
       <a href="#faq">questions</a>
-      <a href="#reserve">reserve</a>
+      <a href="#waitlist">join the waitlist</a>
     </div>
   </div>
 </nav>
@@ -240,10 +240,10 @@
       <h1 class="headline">show what you're<br><em>currently reading</em>,<br>not what you watched.</h1>
       <p class="sub">A small e-paper frame that shows the cover of whatever book is on your nightstand right now. You update it in about ten seconds when you start something new — no app, no account, no syncing that doesn't exist.</p>
       <div class="cta-row">
-        <a class="btn solid" href="#reserve">reserve yours — $40</a>
+        <a class="btn solid" href="#waitlist">join the waitlist</a>
         <a class="btn ghost" href="#how">see how it works</a>
       </div>
-      <div class="deposit-note" style="margin-top:14px;">refundable deposit, toward $180 total. first batch ships this winter.</div>
+      <div class="deposit-note" style="margin-top:14px;">no payment yet — just get notified when the first batch is ready, expected around $299.</div>
     </div>
     <div class="frame-mock-wrap">
       <div class="frame-mock">
@@ -333,18 +333,20 @@
   </div>
 </section>
 
-<section class="reserve" id="reserve">
+<section class="reserve" id="waitlist">
   <div class="wrap">
     <div class="reserve-box">
       <div>
-        <h2>reserve the first run</h2>
-        <p>A small first batch, built and shipped in order. The deposit is refundable any time before it ships — this is a reservation, not a purchase.</p>
+        <h2>join the waitlist</h2>
+        <p>No payment, no commitment — just leave your email and you'll be the first to know when the first small batch is ready to order, expected around $299.</p>
       </div>
       <div class="price-block">
-        <div class="amount">$35</div>
-        <div class="toward">deposit, toward $135 total</div>
-        <a class="btn solid" href="#">reserve my spot</a>
-        <div class="fine">no charge beyond the deposit until your frame ships</div>
+        <form id="waitlist-form" onsubmit="return joinWaitlist(event)">
+          <input type="email" id="waitlist-email" required placeholder="you@example.com"
+            style="width:100%; box-sizing:border-box; padding:13px 15px; font-size:15px; font-family:'Source Sans 3',sans-serif; border:1.5px solid var(--line); border-radius:4px; background:#FBF9F2; color:var(--ink); outline:none; margin-bottom:12px;" />
+          <button type="submit" class="btn solid" style="width:100%; cursor:pointer;">join the waitlist</button>
+        </form>
+        <div id="waitlist-status" class="fine" style="margin-top:12px;"></div>
       </div>
     </div>
   </div>
@@ -363,6 +365,35 @@
     <div class="fnote">a small, independently built object for readers. not affiliated with Goodreads, StoryGraph, or Fable — none of them offer the kind of access this would need, which is the whole reason this exists as a separate thing you update yourself.</div>
   </div>
 </footer>
+
+<script>
+  async function joinWaitlist(e) {
+    e.preventDefault();
+    const emailInput = document.getElementById("waitlist-email");
+    const status = document.getElementById("waitlist-status");
+    const btn = e.target.querySelector("button");
+    btn.disabled = true;
+    btn.textContent = "joining…";
+    try {
+      const res = await fetch("https://eframe.alliyaahmad3.workers.dev/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput.value }),
+      });
+      if (!res.ok) throw new Error("failed");
+      status.textContent = "you're on the list — thank you.";
+      status.style.color = "var(--sage)";
+      emailInput.value = "";
+      btn.textContent = "joined";
+    } catch {
+      status.textContent = "something went wrong — try again in a moment.";
+      status.style.color = "var(--burgundy)";
+      btn.disabled = false;
+      btn.textContent = "join the waitlist";
+    }
+    return false;
+  }
+</script>
 
 </body>
 </html>

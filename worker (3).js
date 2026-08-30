@@ -5,7 +5,7 @@
  * Then: Settings → Bindings → add a KV namespace, bind it as FRAMES
  * (Create the KV namespace first under Workers & Pages → KV if you don't have one)
  *
- * Three routes:
+ * Four routes:
  *  - POST /update/:frameId        <- webpage calls this when someone picks a book
  *  - GET  /frame/:frameId         <- the PHYSICAL FRAME's firmware points its
  *                                     "Auto Rotate URL" setting here. FETCHES the
@@ -14,6 +14,7 @@
  *                                     firmware HTTP clients don't follow 302s.
  *  - GET  /frame/:frameId/meta    <- full JSON (title/author/quote), for OUR
  *                                     webpage's own preview screen only.
+ *  - POST /waitlist               <- landing page's email signup form
  *
  * No auth on this MVP version — frameId itself is the "secret."
  * Fine for a first prototype; revisit before real customers.
@@ -45,6 +46,24 @@ export default {
       const { title, author, thumb, quote, mode } = body;
       if (!title || !thumb) {
         return json({ error: "title and thumb are required" }, 400, cors);
+      }
+      // SECURITY: only allow image URLs from sources we actually use —
+      // without this, anyone could POST an arbitrary URL and turn this
+      // Worker into an open fetch-proxy when /frame/:id later fetches it.
+      const ALLOWED_IMAGE_HOSTS = [
+        "covers.openlibrary.org",
+        "books.google.com",
+        "books.googleusercontent.com",
+        "apod.nasa.gov",
+      ];
+      let thumbHost;
+      try {
+        thumbHost = new URL(thumb).hostname;
+      } catch {
+        return json({ error: "thumb must be a valid URL" }, 400, cors);
+      }
+      if (!ALLOWED_IMAGE_HOSTS.includes(thumbHost)) {
+        return json({ error: `image host not allowed: ${thumbHost}` }, 400, cors);
       }
       const record = {
         title,
@@ -91,6 +110,24 @@ export default {
       const headers = new Headers(cors);
       headers.set("Content-Type", imgResp.headers.get("Content-Type") || "image/jpeg");
       return new Response(imgResp.body, { status: 200, headers });
+    }
+
+    // POST /waitlist  { email }
+    if (url.pathname === "/waitlist" && request.method === "POST") {
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "bad json body" }, 400, cors);
+      }
+      const email = (body.email || "").trim().toLowerCase();
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email)) {
+        return json({ error: "that doesn't look like a valid email" }, 400, cors);
+      }
+      // stored under a waitlist: prefix in the same KV store, alongside frame records
+      await env.FRAMES.put(`waitlist:${email}`, JSON.stringify({ email, joinedAt: new Date().toISOString() }));
+      return json({ ok: true }, 200, cors);
     }
 
     return json({ error: "not found" }, 404, cors);
