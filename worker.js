@@ -5,8 +5,12 @@
  * Then: Settings → Bindings → add a KV namespace, bind it as FRAMES
  * (Create the KV namespace first under Workers & Pages → KV if you don't have one)
  *
- * Four routes:
+ * Five routes:
  *  - POST /update/:frameId        <- webpage calls this when someone picks a book
+ *  - POST /upload/:frameId        <- webpage calls this for the "custom photo"
+ *                                     mode (pets, art, anything). Stores the
+ *                                     actual image bytes, since there's no
+ *                                     trusted external URL for a user's own photo.
  *  - GET  /frame/:frameId         <- the PHYSICAL FRAME's firmware points its
  *                                     "Auto Rotate URL" setting here. FETCHES the
  *                                     actual image server-side and streams the bytes
@@ -31,6 +35,43 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: cors });
+    }
+
+    // POST /upload/:frameId  { imageBase64, contentType }
+    // For the "custom photo" mode — pets, art, anything the person uploads.
+    // Resize/compress happens client-side before this is called; we just
+    // store what we're given, capped to keep KV values reasonable.
+    const uploadMatch = url.pathname.match(/^\/upload\/([A-Za-z0-9]{4,12})$/);
+    if (uploadMatch && request.method === "POST") {
+      const frameId = uploadMatch[1].toUpperCase();
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "bad json body" }, 400, cors);
+      }
+      const { imageBase64, contentType } = body;
+      if (!imageBase64 || typeof imageBase64 !== "string") {
+        return json({ error: "imageBase64 is required" }, 400, cors);
+      }
+      // Rough size guard — base64 is ~33% bigger than raw bytes, cap around 4MB raw
+      if (imageBase64.length > 5_500_000) {
+        return json({ error: "image too large — please use a smaller photo" }, 400, cors);
+      }
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      const type = allowedTypes.includes(contentType) ? contentType : "image/jpeg";
+      await env.FRAMES.put(`customimg:${frameId}`, imageBase64);
+      const record = {
+        title: "custom photo",
+        author: "",
+        thumb: "",
+        quote: "",
+        mode: "custom",
+        customImageType: type,
+        updatedAt: new Date().toISOString(),
+      };
+      await env.FRAMES.put(frameId, JSON.stringify(record));
+      return json({ ok: true, frameId }, 200, cors);
     }
 
     // POST /update/:frameId  { title, author, thumb, quote }
@@ -98,6 +139,19 @@ export default {
         return json({ error: "no book set yet for this frame" }, 404, cors);
       }
       const record = JSON.parse(stored);
+
+      // Custom-photo mode: serve the stored bytes directly, no external fetch
+      if (record.mode === "custom") {
+        const storedImage = await env.FRAMES.get(`customimg:${frameId}`);
+        if (!storedImage) {
+          return json({ error: "no photo stored for this frame" }, 404, cors);
+        }
+        const binary = Uint8Array.from(atob(storedImage), (c) => c.charCodeAt(0));
+        const headers = new Headers(cors);
+        headers.set("Content-Type", record.customImageType || "image/jpeg");
+        return new Response(binary, { status: 200, headers });
+      }
+
       let imgResp;
       try {
         imgResp = await fetch(record.thumb);

@@ -38,6 +38,7 @@ const MOCK_SHELF = [
 
 const MODES = [
   { key: "reading", title: "currently reading", tagline: "the book on your nightstand", auto: false, live: true },
+  { key: "custom", title: "any photo", tagline: "pets, art, family — anything you upload", auto: false, live: true },
   { key: "spotify", title: "now playing", tagline: "updates itself once connected", auto: true, live: false },
   { key: "moon", title: "moon phase", tagline: "tonight's sky, calculated — no setup", auto: true, live: false },
   { key: "weather", title: "today's weather", tagline: "your forecast, updates itself daily", auto: true, live: false },
@@ -158,6 +159,10 @@ function App() {
   const [nasaLoading, setNasaLoading] = useState(false);
   const [nasaErr, setNasaErr] = useState("");
 
+  const [customPreview, setCustomPreview] = useState(null); // { dataUrl, base64, contentType }
+  const [customErr, setCustomErr] = useState("");
+  const [customProcessing, setCustomProcessing] = useState(false);
+
   useEffect(() => {
     if (mode !== "reading" || method !== "search" || debouncedQuery.trim().length < 2) { setResults([]); return; }
     let cancelled = false;
@@ -215,10 +220,75 @@ function App() {
     finally { setNasaLoading(false); }
   };
 
+  const handleCustomFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setCustomErr("please choose an image file");
+      return;
+    }
+    setCustomErr("");
+    setCustomProcessing(true);
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      img.onload = () => {
+        // Fit within the display's 800x480, letterboxed so nothing gets cropped
+        const targetW = 800, targetH = 480;
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#F2EFE6";
+        ctx.fillRect(0, 0, targetW, targetH);
+        const scale = Math.min(targetW / img.width, targetH / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (targetW - w) / 2, (targetH - h) / 2, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        setCustomPreview({ dataUrl, base64: dataUrl.split(",")[1], contentType: "image/jpeg" });
+        setCustomProcessing(false);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const useCustomPhoto = () => {
+    if (!customPreview) return;
+    setChosen({
+      title: "custom photo",
+      author: "",
+      thumb: customPreview.dataUrl,
+      customBase64: customPreview.base64,
+      customContentType: customPreview.contentType,
+    });
+    setStep(3);
+  };
+
   const confirmPush = async () => {
     setPushErr("");
+    if (mode === "custom") {
+      if (!chosen.customBase64) {
+        setPushErr("something went wrong processing that photo — try choosing it again");
+        return;
+      }
+      setPushed(true);
+      try {
+        const res = await fetch(`${WORKER_BASE}/upload/${frameId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: chosen.customBase64, contentType: chosen.customContentType }),
+        });
+        if (!res.ok) throw new Error("bad response");
+        setTimeout(() => setStep(4), 400);
+      } catch {
+        setPushed(false);
+        setPushErr("couldn't reach the backend — check the connection and try again");
+      }
+      return;
+    }
     if (!chosen.thumb) {
-      setPushErr("this mode doesn't have a real image yet — moon and weather need an image-generation step that isn't built. reading and NASA modes work for real right now.");
+      setPushErr("this mode doesn't have a real image yet — moon and weather need an image-generation step that isn't built. reading, NASA, and custom photo modes work for real right now.");
       return;
     }
     setPushed(true);
@@ -238,7 +308,8 @@ function App() {
 
   const reset = () => {
     setChosen(null); setPushed(false); setMode(null); setQuery(""); setResults([]);
-    setMethod(null); setQuote(""); setCity(""); setWeatherErr(""); setNasaErr(""); setPushErr(""); setStep(1);
+    setMethod(null); setQuote(""); setCity(""); setWeatherErr(""); setNasaErr("");
+    setCustomPreview(null); setCustomErr(""); setPushErr(""); setStep(1);
   };
 
   return (
@@ -303,6 +374,33 @@ function App() {
               <div style={{ marginTop: 14 }}>
                 <input autoFocus value={isbn} onChange={(e) => setIsbn(e.target.value.replace(/[^0-9Xx]/g, ""))} placeholder="9780000000000" inputMode="numeric" style={{ ...inputStyle, marginBottom: 10 }} />
                 <button disabled={isbn.length < 8} onClick={() => pickBook({ title: "book from ISBN " + isbn, author: "matched from barcode", thumb: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg` })} style={btnStyle(isbn.length >= 8)}>find this book</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 2 && mode === "custom" && (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>
+              a photo of your pet, art, family — anything. it's resized to fit the frame automatically.
+            </p>
+            {customErr && <div style={{ fontSize: 12, color: COLORS.burgundy, marginBottom: 12 }}>{customErr}</div>}
+            {!customPreview && (
+              <label style={{ display: "block", padding: "36px 16px", border: `1.5px dashed ${COLORS.line}`, borderRadius: 6, cursor: "pointer", background: "#FBF9F2" }}>
+                <input type="file" accept="image/*" onChange={handleCustomFile} style={{ display: "none" }} />
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+                  {customProcessing ? "processing…" : "choose a photo"}
+                </div>
+                <div style={{ fontSize: 12, color: COLORS.faint }}>tap to select from your device</div>
+              </label>
+            )}
+            {customPreview && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                  <img src={customPreview.dataUrl} alt="preview" style={{ width: 220, borderRadius: 4, border: `1px solid ${COLORS.line}` }} />
+                </div>
+                <button onClick={useCustomPhoto} style={{ ...btnStyle(true), marginBottom: 10 }}>use this photo</button>
+                <button onClick={() => setCustomPreview(null)} style={{ width: "100%", padding: "10px", fontSize: 13, border: "none", background: "transparent", color: COLORS.faint, cursor: "pointer", textDecoration: "underline" }}>choose a different one</button>
               </div>
             )}
           </div>

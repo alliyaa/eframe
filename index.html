@@ -227,8 +227,10 @@
     <div class="wordmark">marginalia</div>
     <div class="links">
       <a href="#how">how it works</a>
+      <a href="#uses">other uses</a>
       <a href="#faq">questions</a>
-      <a href="#waitlist">join the waitlist</a>
+      <a href="#preorder">preorder</a>
+      <a href="#waitlist">waitlist</a>
     </div>
   </div>
 </nav>
@@ -240,13 +242,30 @@
       <h1 class="headline">show what you're<br><em>currently reading</em>,<br>not what you watched.</h1>
       <p class="sub">A small e-paper frame that shows the cover of whatever book is on your nightstand right now. You update it in about ten seconds when you start something new — no app, no account, no syncing that doesn't exist.</p>
       <div class="cta-row">
-        <a class="btn solid" href="#waitlist">join the waitlist</a>
-        <a class="btn ghost" href="#how">see how it works</a>
+        <a class="btn solid" href="#preorder">preorder — $319</a>
+        <a class="btn ghost" href="#waitlist">just join the waitlist</a>
       </div>
-      <div class="deposit-note" style="margin-top:14px;">no payment yet — just get notified when the first batch is ready, expected around $299.</div>
     </div>
     <div class="frame-mock-wrap">
-      <div class="frame-mock">
+      <!--
+        REAL VIDEO GOES HERE once you've recorded one — film the physical
+        frame actually redrawing (the 15-30 sec e-ink change is genuinely
+        satisfying to watch). Steps:
+          1. Record on your phone, export as .mp4
+          2. Upload the file into this same repo folder, e.g. demo.mp4
+          3. Change the src below from the placeholder to "demo.mp4"
+        Until then, this falls back to the static mockup so the page
+        never shows a broken video.
+      -->
+      <video
+        class="frame-mock"
+        style="width:260px; transform:rotate(-1.4deg); box-shadow:0 24px 50px -22px rgba(0,0,0,0.5); background:var(--wood);"
+        autoplay muted loop playsinline
+        onerror="this.style.display='none'; document.getElementById('mock-fallback').style.display='block';"
+      >
+        <source src="demo.mp4" type="video/mp4" />
+      </video>
+      <div id="mock-fallback" class="frame-mock" style="display:none;">
         <div class="frame-screen">
           <div class="frame-cover"></div>
           <div class="frame-caption">
@@ -261,6 +280,16 @@
 </header>
 
 <hr class="rule" />
+
+<section style="position:relative; z-index:1; padding:20px 0 70px;">
+  <div class="wrap" style="text-align:center;">
+    <h2 style="font-size:clamp(24px,3vw,30px); margin-bottom:14px;">try the actual tool</h2>
+    <p style="font-family:'Source Serif 4',serif; font-size:17px; color:#3A3B33; max-width:52ch; margin:0 auto 30px;">This is the real page a frame owner uses — search a title, pick a real cover, see it staged for the screen. Try it yourself, no frame required.</p>
+    <div style="max-width:460px; margin:0 auto; border:1.5px solid var(--ink); border-radius:4px; overflow:hidden; box-shadow:0 20px 44px -24px rgba(0,0,0,0.35);">
+      <iframe src="app.html" title="Try the Marginalia app" style="width:100%; height:640px; border:none; display:block;"></iframe>
+    </div>
+  </div>
+</section>
 
 <section class="note">
   <div class="wrap">
@@ -310,6 +339,39 @@
 
 <hr class="rule" />
 
+<section class="how" id="uses">
+  <div class="wrap">
+    <div class="how-head">
+      <h2>not just for books</h2>
+      <p style="font-family:'Source Serif 4',serif; font-size:17px; color:#3A3B33; margin-top:14px; max-width:52ch;">The frame doesn't know or care what's on it — it just displays whatever you point it at. Reading is where this started, but it's not where it ends.</p>
+    </div>
+
+    <div class="step">
+      <div class="num">→</div>
+      <div>
+        <h3>your pet, your art, your people</h3>
+        <p>Upload any photo straight from your phone — resized to fit automatically. No book required at all; some people will only ever use it for this.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">→</div>
+      <div>
+        <h3>now playing</h3>
+        <p>Show the album art of whatever's playing on Spotify. This one needs a little extra setup on your end — we'll walk you through it, screenshots included, and you can always book a quick call with us if you get stuck.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">→</div>
+      <div>
+        <h3>tonight's moon, today's weather, this day in space</h3>
+        <p>A few quieter modes that need no setup at all — calculated or fetched automatically, just pick one and it looks after itself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
 <section class="faq" id="faq">
   <div class="wrap">
     <h2>the honest questions</h2>
@@ -333,12 +395,30 @@
   </div>
 </section>
 
+<section class="reserve" id="preorder">
+  <div class="wrap">
+    <div class="reserve-box">
+      <div>
+        <h2>preorder now</h2>
+        <p>Ready to skip the wait? Pay now and lock in a spot in the first build batch — full price, no separate deposit step. Handled securely through Stripe; we never see or store your card details.</p>
+      </div>
+      <div class="price-block">
+        <div class="amount">$319</div>
+        <div class="toward">full price, first batch</div>
+        <!-- REPLACE href="#" below with your real Stripe Payment Link once created -->
+        <a class="btn solid" href="#" id="preorder-link" style="text-align:center; display:block;">preorder — pay now</a>
+        <div class="fine">secure checkout via Stripe</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="reserve" id="waitlist">
   <div class="wrap">
     <div class="reserve-box">
       <div>
-        <h2>join the waitlist</h2>
-        <p>No payment, no commitment — just leave your email and you'll be the first to know when the first small batch is ready to order, expected around $299.</p>
+        <h2>not ready yet? join the waitlist</h2>
+        <p>No payment, no commitment — just leave your email and you'll be the first to know about updates, restocks, and new modes.</p>
       </div>
       <div class="price-block">
         <form id="waitlist-form" onsubmit="return joinWaitlist(event)">
