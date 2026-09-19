@@ -5,7 +5,7 @@
  * Then: Settings → Bindings → add a KV namespace, bind it as FRAMES
  * (Create the KV namespace first under Workers & Pages → KV if you don't have one)
  *
- * Five routes:
+ * Five API routes:
  *  - POST /update/:frameId        <- webpage calls this when someone picks a book
  *  - POST /upload/:frameId        <- webpage calls this for the "custom photo"
  *                                     mode (pets, art, anything). Stores the
@@ -20,9 +20,17 @@
  *                                     webpage's own preview screen only.
  *  - POST /waitlist               <- landing page's email signup form
  *
+ * PLUS: anything else (GET /, GET /app.html, etc.) transparently proxies
+ * through to the real site on Cloudflare Pages (PAGES_ORIGIN below) — so
+ * this same eframe.alliyaahmad3.workers.dev domain serves the whole site,
+ * not just the API. One URL for everything, no separate Pages link to juggle.
+ *
  * No auth on this MVP version — frameId itself is the "secret."
  * Fine for a first prototype; revisit before real customers.
  */
+
+// EDIT THIS if your Pages project's URL is ever different
+const PAGES_ORIGIN = "https://eframe.pages.dev";
 
 export default {
   async fetch(request, env) {
@@ -182,6 +190,21 @@ export default {
       // stored under a waitlist: prefix in the same KV store, alongside frame records
       await env.FRAMES.put(`waitlist:${email}`, JSON.stringify({ email, joinedAt: new Date().toISOString() }));
       return json({ ok: true }, 200, cors);
+    }
+
+    // Anything else: transparently serve the real site (index.html, app.html,
+    // etc.) from Cloudflare Pages, so this one domain does double duty as
+    // both the API and the actual pages — no separate .pages.dev link needed.
+    if (request.method === "GET") {
+      const pagesUrl = PAGES_ORIGIN + url.pathname + url.search;
+      try {
+        const pageResp = await fetch(pagesUrl, { headers: { "User-Agent": "eframe-worker-proxy" } });
+        const headers = new Headers(pageResp.headers);
+        headers.delete("content-security-policy"); // avoid Pages' CSP blocking things when served from this domain
+        return new Response(pageResp.body, { status: pageResp.status, headers });
+      } catch {
+        return json({ error: "could not reach the site" }, 502, cors);
+      }
     }
 
     return json({ error: "not found" }, 404, cors);
