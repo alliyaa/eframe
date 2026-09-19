@@ -23,6 +23,9 @@ const { useState, useEffect } = React;
 // ---- EDIT THIS if your Worker URL changes ----
 const WORKER_BASE = "https://eframe.alliyaahmad3.workers.dev";
 
+// EDIT THIS if you ever need to rotate the key — restricted to Books API only in Google Cloud Console
+const GOOGLE_BOOKS_API_KEY = "AIzaSyDHeqkQz3R1ZqyR2YXa2HsmA98uC6JXsNA";
+
 const COLORS = {
   ink: "#22241F", paper: "#EDE6D3", paperDeep: "#E2D9C0",
   burgundy: "#450C3F", burgundyDeep: "#2E0829", sage: "#6B7F5E",
@@ -167,7 +170,7 @@ function App() {
     if (mode !== "reading" || method !== "search" || debouncedQuery.trim().length < 2) { setResults([]); return; }
     let cancelled = false;
     setLoading(true);
-    fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(debouncedQuery)}&maxResults=8`)
+    fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(debouncedQuery)}&maxResults=8&key=${GOOGLE_BOOKS_API_KEY}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
