@@ -176,7 +176,7 @@ function App() {
         if (cancelled) return;
         const items = (data.items || [])
           .filter((it) => it.volumeInfo && it.volumeInfo.imageLinks && it.volumeInfo.imageLinks.thumbnail)
-          .map((it) => ({ title: it.volumeInfo.title, author: (it.volumeInfo.authors || ["Unknown"]).join(", "), thumb: it.volumeInfo.imageLinks.thumbnail.replace("http://", "https://"), id: it.id }));
+          .map((it) => ({ title: it.volumeInfo.title, author: (it.volumeInfo.authors || ["Unknown"]).join(", "), thumb: it.volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("zoom=1", "zoom=3").replace("&edge=curl", ""), id: it.id }));
         setResults(items);
       })
       .catch(() => setResults([]))
@@ -376,7 +376,7 @@ function App() {
             {method === "isbn" && (
               <div style={{ marginTop: 14 }}>
                 <input autoFocus value={isbn} onChange={(e) => setIsbn(e.target.value.replace(/[^0-9Xx]/g, ""))} placeholder="9780000000000" inputMode="numeric" style={{ ...inputStyle, marginBottom: 10 }} />
-                <button disabled={isbn.length < 8} onClick={() => pickBook({ title: "book from ISBN " + isbn, author: "matched from barcode", thumb: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg` })} style={btnStyle(isbn.length >= 8)}>find this book</button>
+                <button disabled={isbn.length < 8} onClick={() => pickBook({ title: "book from ISBN " + isbn, author: "matched from barcode", thumb: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` })} style={btnStyle(isbn.length >= 8)}>find this book</button>
               </div>
             )}
           </div>
