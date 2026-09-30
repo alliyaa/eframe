@@ -3,228 +3,171 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Marginalia — a frame for what you're reading</title>
+<title>marginalia :: a frame for what you're reading</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,340..700,0..1&family=Source+Serif+4:wght@400;500&family=Source+Sans+3:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@500;700&family=Work+Sans:wght@400;500;600&display=swap');
 
   :root{
-    --ink:#22241F;
-    --paper:#EDE6D3;
-    --paper-deep:#E2D9C0;
-    --paper-warm:#F4EFE0;
-    --burgundy:#450C3F;
-    --burgundy-deep:#2E0829;
+    --ink:#20201d;
+    --paper:#F3EDDF;
+    --paper-deep:#E9E0CB;
+    --plum:#450C3F;
+    --plum-deep:#2E0829;
     --sage:#6B7F5E;
+    --yellow:#F2C14E;
+    --coral:#FF6F59;
     --line:#C9BEA0;
-    --faint:#786F52;
-    --wood:#3E2E1F;
+    --faint:#6b6558;
   }
-
   *{ box-sizing:border-box; }
   html{ scroll-behavior:smooth; }
   body{
-    margin:0;
-    background:var(--paper);
-    color:var(--ink);
-    font-family:'Source Sans 3', sans-serif;
-    font-size:17px;
-    line-height:1.55;
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Work Sans', sans-serif; font-size:17px; line-height:1.55;
+    overflow-x:hidden;
   }
-  h1,h2,h3, .display{
-    font-family:'Fraunces', serif;
-    font-weight:560;
-    letter-spacing:-0.01em;
-    margin:0;
-  }
+  h1,h2,h3,.display{ font-family:'Bricolage Grotesque', sans-serif; font-weight:800; letter-spacing:-0.02em; margin:0; }
+  .hand{ font-family:'Caveat', cursive; }
   a{ color:inherit; }
-  .wrap{ max-width:1080px; margin:0 auto; padding:0 28px; }
+  .wrap{ max-width:1060px; margin:0 auto; padding:0 26px; position:relative; z-index:2; }
 
-  /* faint paper-grain texture, no gradients */
-  body::before{
-    content:"";
-    position:fixed; inset:0; pointer-events:none; z-index:0;
-    opacity:0.5;
-    background-image:
-      radial-gradient(circle at 1px 1px, rgba(34,36,31,0.045) 1px, transparent 0);
-    background-size: 3px 3px;
+  /* grain texture over everything, dead simple, no libraries */
+  .grain{
+    position:fixed; inset:0; pointer-events:none; z-index:50; opacity:0.05; mix-blend-mode:multiply;
   }
 
-  /* ---------- nav ---------- */
-  nav{
-    position:sticky; top:0; z-index:20;
-    background:var(--paper);
-    border-bottom:1px solid var(--line);
+  /* torn paper divider between sections */
+  .torn{ height:26px; width:100%; position:relative; z-index:2;
+    background: var(--paper);
+    clip-path: polygon(0% 0%,3% 60%,7% 10%,12% 70%,17% 5%,22% 55%,27% 15%,32% 65%,37% 0%,42% 60%,47% 10%,52% 70%,57% 5%,62% 55%,67% 15%,72% 65%,77% 0%,82% 60%,87% 10%,92% 70%,97% 5%,100% 50%,100% 100%,0% 100%);
   }
-  nav .wrap{
-    display:flex; align-items:baseline; justify-content:space-between;
-    padding-top:18px; padding-bottom:18px;
-  }
-  .wordmark{
-    font-family:'Fraunces', serif;
-    font-weight:600; font-style:italic;
-    font-size:22px;
-    letter-spacing:-0.01em;
-  }
-  nav .links{ display:flex; gap:28px; font-size:14.5px; }
-  nav .links a{ text-decoration:none; border-bottom:1px solid transparent; padding-bottom:2px; }
-  nav .links a:hover{ border-bottom-color:var(--ink); }
+  .torn.flip{ transform:scaleY(-1); }
+  .torn.deep{ background:var(--paper-deep); }
 
-  /* ---------- hero ---------- */
-  header.hero{ position:relative; z-index:1; padding:64px 0 40px; }
-  .hero-grid{
-    display:grid;
-    grid-template-columns: 1.15fr 0.85fr;
-    gap:56px;
-    align-items:center;
-  }
-  .kicker{
-    font-size:13px; letter-spacing:0.14em; text-transform:uppercase;
-    color:var(--burgundy); font-weight:600; margin-bottom:18px;
-  }
-  h1.headline{
-    font-size:clamp(38px, 5vw, 58px);
-    line-height:1.04;
-  }
-  h1.headline em{ font-style:italic; color:var(--burgundy); }
-  .sub{
-    margin-top:22px; max-width:46ch;
-    font-family:'Source Serif 4', serif;
-    font-size:19px; color:#3A3B33; line-height:1.6;
-  }
-  .cta-row{ margin-top:34px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
-  .btn{
-    display:inline-block; padding:14px 26px; font-size:15px; font-weight:600;
-    text-decoration:none; border-radius:3px; border:1.5px solid var(--burgundy);
-    font-family:'Source Sans 3', sans-serif;
-  }
-  .btn.solid{ background:var(--burgundy); color:var(--paper-warm); }
-  .btn.solid:hover{ background:var(--burgundy-deep); }
-  .btn.ghost{ background:transparent; color:var(--burgundy); }
-  .deposit-note{ font-size:13.5px; color:var(--faint); }
+  /* doodle sparkle */
+  .sparkle{ position:absolute; width:22px; height:22px; opacity:0.85; }
 
-  /* frame mock — custom, drawn in CSS, not a stock photo or icon */
-  .frame-mock-wrap{ display:flex; justify-content:center; }
-  .frame-mock{
-    background:var(--wood);
-    padding:16px 16px 26px;
-    width:260px;
-    transform: rotate(-1.4deg);
-    box-shadow: 0 24px 50px -22px rgba(0,0,0,0.5);
-  }
-  .frame-screen{
-    background:#F2EFE6; padding:14px; min-height:280px;
-    display:flex; align-items:center; justify-content:center; flex-direction:column;
-  }
-  .frame-cover{
-    width:100%; aspect-ratio:2/3;
-    background:
-      linear-gradient(180deg, #8C6B4F 0%, #8C6B4F 55%, #C9B18C 55%, #C9B18C 100%);
-    position:relative;
-    filter: saturate(0.7) contrast(1.05);
-  }
-  .frame-cover::after{
-    content:"";
-    position:absolute; left:14%; right:14%; top:18%; bottom:38%;
-    border:1.5px solid rgba(34,36,31,0.35);
-  }
-  .frame-caption{ margin-top:12px; text-align:center; }
-  .frame-caption .t{ font-family:'Fraunces', serif; font-weight:600; font-size:12px; color:#F2EFE6; }
-  .frame-caption .a{ font-size:10.5px; color:#C9BEA0; margin-top:2px; }
-  .frame-caption .q{
-    font-family:'Fraunces', serif; font-style:italic; font-size:10.5px;
-    color:#E2D4B8; margin-top:9px; padding:0 8px; line-height:1.4;
+  /* washi tape strip */
+  .tape{
+    position:absolute; width:70px; height:24px;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 6px, rgba(69,12,63,0.25) 6px 12px);
+    background-color: rgba(242,193,78,0.55);
+    opacity:0.9; box-shadow:0 2px 4px rgba(0,0,0,0.08);
   }
 
-  /* ---------- section: the actual problem, in prose ---------- */
-  section.note{ position:relative; z-index:1; padding:70px 0; }
+  /* scroll reveal */
+  .reveal{ opacity:0; transform:translateY(18px) rotate(var(--r,0deg)); transition:opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0) rotate(var(--r,0deg)); }
+  @media (prefers-reduced-motion: reduce){ .reveal{ transition:none; opacity:1; transform:none; } }
+
+  /* nav */
+  nav{ position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:2px solid var(--ink); }
+  nav .wrap{ display:flex; align-items:center; justify-content:space-between; padding:16px 26px; }
+  .wordmark{ font-family:'Bricolage Grotesque', sans-serif; font-weight:800; font-size:24px; }
+  .wordmark span{ color:var(--plum); }
+  nav .links{ display:flex; gap:22px; font-size:14px; font-weight:600; }
+  nav .links a{ text-decoration:none; position:relative; }
+  nav .links a:hover{ color:var(--plum); }
+
+  /* hero */
+  header.hero{ position:relative; padding:60px 0 30px; z-index:2; }
+  .hero-grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:50px; align-items:center; }
+  .kicker{ font-family:'Caveat', cursive; font-size:22px; color:var(--plum); transform:rotate(-2deg); display:inline-block; margin-bottom:6px; }
+  h1.headline{ font-size:clamp(36px,5vw,54px); line-height:1.05; }
+  h1.headline .pop{ color:var(--plum); text-decoration:underline wavy var(--coral) 3px; text-underline-offset:6px; }
+  .sub{ margin-top:18px; max-width:46ch; font-size:18px; color:#333026; }
+  .cta-row{ margin-top:28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .btn{ display:inline-block; padding:13px 24px; font-size:15px; font-weight:700; text-decoration:none; border-radius:999px; border:2.5px solid var(--ink); font-family:'Work Sans', sans-serif; transform:rotate(-1deg); transition:transform 0.15s ease; }
+  .btn:hover{ transform:rotate(1deg) scale(1.03); }
+  .btn.solid{ background:var(--plum); color:var(--paper); border-color:var(--plum); }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+
+  .polaroid-wrap{ display:flex; justify-content:center; position:relative; }
+  .polaroid{
+    background:#fff; padding:14px 14px 40px; width:270px; transform:rotate(3deg);
+    box-shadow:0 18px 34px -14px rgba(0,0,0,0.35); position:relative;
+  }
+  .polaroid video, .polaroid .fallback-shot{ width:100%; display:block; background:var(--plum-deep); aspect-ratio:5/6; object-fit:cover; }
+  .polaroid .cap{ font-family:'Caveat', cursive; font-size:20px; text-align:center; margin-top:10px; color:var(--ink); }
+
+  /* the frame-mockup used as the fallback image inside the polaroid */
+  .frame-screen{ width:100%; height:100%; background:#F2EFE6; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:14px; }
+  .frame-cover{ width:70%; aspect-ratio:2/3; background:linear-gradient(180deg,#8C6B4F 0%,#8C6B4F 55%,#C9B18C 55%,#C9B18C 100%); filter:saturate(0.7) contrast(1.05); position:relative; }
+  .frame-caption .t{ font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:13px; margin-top:10px; }
+  .frame-caption .a{ font-size:11px; color:#6b6558; }
+
+  /* note section */
+  section.note{ position:relative; z-index:2; padding:50px 0; }
   .note .wrap{ max-width:680px; }
-  .note p{ font-family:'Source Serif 4', serif; font-size:19px; line-height:1.72; color:#33352C; }
-  .note p + p{ margin-top:20px; }
-  .note .sign{
-    margin-top:30px; font-family:'Fraunces', serif; font-style:italic; font-size:16px; color:var(--faint);
-  }
+  .note p{ font-size:18px; line-height:1.7; color:#2c2a22; }
+  .note p + p{ margin-top:18px; }
+  .note .sign{ margin-top:24px; font-family:'Caveat', cursive; font-size:20px; color:var(--faint); }
 
-  hr.rule{ border:none; border-top:1px solid var(--line); margin:0; }
+  /* how it works, scrapbook cards */
+  section.how{ position:relative; z-index:2; padding:50px 0; background:var(--paper-deep); }
+  .how-head h2{ font-size:clamp(28px,3.6vw,36px); }
+  .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:36px; }
+  .card{ background:#fff; border:2.5px solid var(--ink); border-radius:6px; padding:22px; box-shadow:5px 5px 0 var(--ink); }
+  .card .num{ font-family:'Caveat', cursive; font-size:30px; color:var(--plum); }
+  .card h3{ font-size:19px; margin:6px 0 8px; }
+  .card p{ font-size:14.5px; color:#3a3730; }
+  @media (max-width:820px){ .steps{ grid-template-columns:1fr; } }
 
-  /* ---------- how it works — asymmetric, not a 3-card row ---------- */
-  section.how{ position:relative; z-index:1; padding:70px 0; }
-  .how-head{ max-width:520px; margin-bottom:56px; }
-  .how-head h2{ font-size:clamp(28px,3.4vw,38px); }
-  .step{
-    display:grid;
-    grid-template-columns: 90px 1fr;
-    gap:26px;
-    padding:34px 0;
-    border-top:1px solid var(--line);
-  }
-  .step:last-child{ border-bottom:1px solid var(--line); }
-  .step .num{
-    font-family:'Fraunces', serif; font-size:44px; font-weight:400; font-style:italic;
-    color:var(--burgundy); line-height:1;
-  }
-  .step h3{ font-size:22px; margin-bottom:8px; }
-  .step p{ color:#3A3B33; max-width:52ch; }
-  .step:nth-child(2){ padding-left:0; }
-  .step:nth-child(3) .num, .step:nth-child(1) .num{ opacity:0.85; }
+  /* uses section */
+  .uses-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:36px; }
+  .use-card{ background:var(--paper); border:2.5px dashed var(--ink); border-radius:14px; padding:22px; position:relative; }
+  .use-card .sticker{ position:absolute; top:-14px; right:-10px; background:var(--yellow); border:2px solid var(--ink); border-radius:50%; width:52px; height:52px; display:flex; align-items:center; justify-content:center; font-family:'Caveat',cursive; font-size:14px; font-weight:700; text-align:center; line-height:1.1; }
+  @media (max-width:820px){ .uses-grid{ grid-template-columns:1fr; } }
 
-  /* ---------- pull quote ---------- */
-  section.pull{ position:relative; z-index:1; padding:20px 0 76px; }
-  .pull blockquote{
-    margin:0; font-family:'Fraunces', serif; font-weight:400; font-style:italic;
-    font-size:clamp(24px, 3vw, 34px); line-height:1.4; color:var(--burgundy-deep);
-    border-left:2px solid var(--burgundy); padding-left:28px;
-  }
+  /* pull quote as marker highlight */
+  section.pull{ position:relative; z-index:2; padding:50px 0 60px; text-align:center; }
+  .pull blockquote{ margin:0 auto; max-width:640px; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:clamp(22px,3vw,30px); line-height:1.4; }
+  .pull mark{ background:var(--yellow); padding:2px 6px; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
 
-  /* ---------- honest FAQ, plain text, no icons ---------- */
-  section.faq{ position:relative; z-index:1; padding:70px 0; background:var(--paper-deep); }
-  .faq h2{ font-size:clamp(26px,3vw,34px); margin-bottom:40px; }
-  .qa{ padding:24px 0; border-top:1px solid var(--line); max-width:720px; }
-  .qa:last-child{ border-bottom:1px solid var(--line); }
-  .qa .q{ font-weight:600; font-size:17px; margin-bottom:8px; font-family:'Fraunces', serif; }
-  .qa .a{ color:#3A3B33; max-width:60ch; }
+  /* faq */
+  section.faq{ position:relative; z-index:2; padding:50px 0; }
+  .faq h2{ font-size:clamp(26px,3vw,34px); margin-bottom:30px; }
+  .qa{ padding:20px 0; border-top:2.5px dashed var(--line); max-width:720px; }
+  .qa:last-child{ border-bottom:2.5px dashed var(--line); }
+  .qa .q{ font-weight:700; font-size:17px; margin-bottom:6px; font-family:'Bricolage Grotesque',sans-serif; }
+  .qa .a{ color:#3a3730; font-size:15px; max-width:62ch; }
 
-  /* ---------- reserve / pricing, single honest offer ---------- */
-  section.reserve{ position:relative; z-index:1; padding:80px 0 90px; }
-  .reserve-box{
-    border:1.5px solid var(--ink);
-    padding:44px;
-    display:grid;
-    grid-template-columns: 1.3fr 1fr;
-    gap:40px;
-    align-items:center;
-  }
-  .reserve-box h2{ font-size:clamp(26px,3vw,32px); margin-bottom:14px; }
-  .reserve-box p{ color:#3A3B33; max-width:44ch; }
-  .price-block{ text-align:left; border-left:1px solid var(--line); padding-left:36px; }
-  .price-block .amount{ font-family:'Fraunces', serif; font-size:46px; font-weight:600; }
-  .price-block .toward{ font-size:13.5px; color:var(--faint); margin-top:2px; }
-  .price-block .btn{ margin-top:18px; width:100%; text-align:center; }
-  .price-block .fine{ font-size:12.5px; color:var(--faint); margin-top:12px; }
+  /* preorder / waitlist */
+  section.reserve{ position:relative; z-index:2; padding:60px 0; }
+  .reserve-box{ background:#fff; border:3px solid var(--ink); border-radius:14px; box-shadow:7px 7px 0 var(--plum); padding:38px; display:grid; grid-template-columns:1.3fr 1fr; gap:36px; align-items:center; }
+  .reserve-box h2{ font-size:clamp(24px,3vw,30px); margin-bottom:12px; }
+  .reserve-box p{ color:#3a3730; max-width:44ch; font-size:15px; }
+  .price-block{ text-align:left; border-left:2.5px dashed var(--line); padding-left:32px; }
+  .price-block .amount{ font-family:'Bricolage Grotesque',sans-serif; font-size:44px; font-weight:800; }
+  .price-block .toward{ font-size:13px; color:var(--faint); margin-top:2px; }
+  .price-block .btn{ margin-top:16px; width:100%; text-align:center; }
+  .price-block .fine{ font-size:12px; color:var(--faint); margin-top:10px; }
+  @media (max-width:820px){ .reserve-box{ grid-template-columns:1fr; } .price-block{ border-left:none; border-top:2.5px dashed var(--line); padding-left:0; padding-top:22px; } }
 
-  /* ---------- footer, real disclosure links, not omitted ---------- */
-  footer{ position:relative; z-index:1; padding:40px 0 60px; border-top:1px solid var(--line); }
-  footer .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; align-items:center; }
-  footer .fmark{ font-family:'Fraunces', serif; font-style:italic; font-size:16px; }
-  footer .flinks{ display:flex; gap:22px; font-size:13.5px; color:var(--faint); }
+  /* try it section */
+  section.try{ position:relative; z-index:2; padding:20px 0 60px; text-align:center; }
+  .try h2{ font-size:clamp(24px,3vw,30px); margin-bottom:12px; }
+  .try p{ font-size:16px; color:#3a3730; max-width:52ch; margin:0 auto 26px; }
+  .try iframe{ width:100%; max-width:460px; height:640px; border:3px solid var(--ink); border-radius:10px; box-shadow:6px 6px 0 var(--ink); }
+
+  footer{ position:relative; z-index:2; padding:36px 0 50px; border-top:2.5px solid var(--ink); }
+  footer .wrap{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+  footer .top{ width:100%; display:flex; justify-content:space-between; align-items:center; }
+  footer .fmark{ font-family:'Caveat',cursive; font-size:20px; }
+  footer .flinks{ display:flex; gap:18px; font-size:13px; color:var(--faint); }
   footer .flinks a{ text-decoration:none; }
-  footer .flinks a:hover{ color:var(--ink); }
-  footer .fnote{ font-size:12.5px; color:var(--faint); margin-top:16px; max-width:640px; }
+  footer .fnote{ font-size:12px; color:var(--faint); max-width:640px; margin-top:12px; }
 
-  @media (max-width: 820px){
-    .hero-grid{ grid-template-columns:1fr; }
-    .frame-mock-wrap{ order:-1; margin-bottom:10px; }
-    .reserve-box{ grid-template-columns:1fr; }
-    .price-block{ border-left:none; border-top:1px solid var(--line); padding-left:0; padding-top:26px; }
-    .step{ grid-template-columns:56px 1fr; }
-    .step .num{ font-size:32px; }
-  }
+  @media (max-width:820px){ .hero-grid{ grid-template-columns:1fr; } .polaroid-wrap{ order:-1; margin-bottom:10px; } }
 </style>
 </head>
 <body>
 
+<svg class="grain" xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+
 <nav>
   <div class="wrap">
-    <div class="wordmark">marginalia</div>
+    <div class="wordmark">margin<span>alia</span></div>
     <div class="links">
       <a href="#how">how it works</a>
       <a href="#uses">other uses</a>
@@ -238,176 +181,151 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="kicker">a shelf, updated by hand</div>
-      <h1 class="headline">show what you're<br><em>currently reading</em>,<br>not what you watched.</h1>
-      <p class="sub">A small e-paper frame that shows the cover of whatever book is on your nightstand right now. You update it in about ten seconds when you start something new — no app, no account, no syncing that doesn't exist.</p>
+      <span class="kicker">psst, this is kind of a big deal for readers</span>
+      <h1 class="headline">show off whatever you're <span class="pop">actually reading</span> right now</h1>
+      <p class="sub">it's a tiny e paper frame that shows the cover of whatever book's on your nightstand. update it in like ten seconds when you start something new. no app to download, no account, nothing weird syncing in the background.</p>
       <div class="cta-row">
-        <a class="btn solid" href="#preorder">preorder — $319</a>
+        <a class="btn solid" href="#preorder">preorder it, $319</a>
         <a class="btn ghost" href="#waitlist">just join the waitlist</a>
       </div>
     </div>
-    <div class="frame-mock-wrap">
-      <!--
-        REAL VIDEO GOES HERE once you've recorded one — film the physical
-        frame actually redrawing (the 15-30 sec e-ink change is genuinely
-        satisfying to watch). Steps:
-          1. Record on your phone, export as .mp4
-          2. Upload the file into this same repo folder, e.g. demo.mp4
-          3. Change the src below from the placeholder to "demo.mp4"
-        Until then, this falls back to the static mockup so the page
-        never shows a broken video.
-      -->
-      <video
-        class="frame-mock"
-        style="width:260px; transform:rotate(-1.4deg); box-shadow:0 24px 50px -22px rgba(0,0,0,0.5); background:var(--wood);"
-        autoplay muted loop playsinline
-        onerror="this.style.display='none'; document.getElementById('mock-fallback').style.display='block';"
-      >
-        <source src="demo.mp4" type="video/mp4" />
-      </video>
-      <div id="mock-fallback" class="frame-mock" style="display:none;">
-        <div class="frame-screen">
-          <div class="frame-cover"></div>
-          <div class="frame-caption">
-            <div class="t">Piranesi</div>
-            <div class="a">Susanna Clarke</div>
-            <div class="q">"the beauty of the house is immeasurable..."</div>
+    <div class="polaroid-wrap">
+      <div class="tape" style="top:-10px; left:20px; transform:rotate(-8deg);"></div>
+      <div class="tape" style="bottom:30px; right:-6px; transform:rotate(12deg);"></div>
+      <div class="polaroid">
+        <video autoplay muted loop playsinline class="fallback-shot" onerror="this.style.display='none'; document.getElementById('mock-fallback').style.display='flex';">
+          <source src="demo.mp4" type="video/mp4" />
+        </video>
+        <div id="mock-fallback" class="fallback-shot" style="display:none;">
+          <div class="frame-screen">
+            <div class="frame-cover"></div>
+            <div class="frame-caption">
+              <div class="t">piranesi</div>
+              <div class="a">susanna clarke</div>
+            </div>
           </div>
         </div>
+        <div class="cap">currently reading, obviously</div>
       </div>
     </div>
   </div>
 </header>
 
-<hr class="rule" />
-
-<section style="position:relative; z-index:1; padding:20px 0 70px;">
-  <div class="wrap" style="text-align:center;">
-    <h2 style="font-size:clamp(24px,3vw,30px); margin-bottom:14px;">try the actual tool</h2>
-    <p style="font-family:'Source Serif 4',serif; font-size:17px; color:#3A3B33; max-width:52ch; margin:0 auto 30px;">This is the real page a frame owner uses — search a title, pick a real cover, see it staged for the screen. Try it yourself, no frame required.</p>
-    <div style="max-width:460px; margin:0 auto; border:1.5px solid var(--ink); border-radius:4px; overflow:hidden; box-shadow:0 20px 44px -24px rgba(0,0,0,0.35);">
-      <iframe src="app.html" title="Try the Marginalia app" style="width:100%; height:640px; border:none; display:block;"></iframe>
-    </div>
-  </div>
-</section>
+<div class="torn"></div>
 
 <section class="note">
   <div class="wrap">
-    <p>Goodreads doesn't have an API anymore. Neither does StoryGraph, or Fable. So nothing can automatically know what you're reading — not this, not anything. We stopped pretending that was solvable and built around it instead.</p>
-    <p>You tell the frame what's on your nightstand the same way you'd tell a friend — quick, when it's true, not tracked in the background. It's less "smart home device" and more a small ritual, the same as moving a bookmark.</p>
-    <div class="sign">— built by someone who was tired of nightstand photos looking worse than the books deserved</div>
+    <p class="reveal" style="--r:-0.4deg;">goodreads doesn't have an api anymore. neither does storygraph or fable. so nothing can automatically know what you're reading, not this, not anything else out there. instead of pretending that's solvable, we just built around it.</p>
+    <p class="reveal" style="--r:0.3deg;">you tell the frame what's on your nightstand kind of like texting a friend. quick, only when it's true, not tracked in the background all day. it's less a smart home gadget and more a tiny ritual, same as moving a bookmark.</p>
+    <div class="sign">made by a reader who was tired of nightstand pics looking worse than the books deserved</div>
   </div>
 </section>
 
-<hr class="rule" />
+<div class="torn deep"></div>
 
 <section class="how" id="how">
   <div class="wrap">
     <div class="how-head">
-      <h2>three steps. no app to install.</h2>
+      <h2>three steps, no app to install</h2>
     </div>
-
-    <div class="step">
-      <div class="num">1</div>
-      <div>
+    <div class="steps">
+      <div class="card reveal" style="--r:-1.2deg;">
+        <div class="num">1.</div>
         <h3>scan the code on the back</h3>
-        <p>Once. It opens a plain page in your phone's browser — nothing to download, nothing to log into.</p>
+        <p>once. it opens a plain page in your phone's browser. nothing to download, nothing to log into.</p>
       </div>
-    </div>
-    <div class="step">
-      <div class="num">2</div>
-      <div>
+      <div class="card reveal" style="--r:0.8deg;">
+        <div class="num">2.</div>
         <h3>find the book</h3>
-        <p>Scan the barcode on the back cover, pick from your own shelf if you've imported one, or just search the title. Whichever's fastest for the book in your hand.</p>
+        <p>scan the barcode, pick from your own shelf, or just search the title. whichever's fastest for the book in your hand.</p>
       </div>
-    </div>
-    <div class="step">
-      <div class="num">3</div>
-      <div>
-        <h3>it redraws — slowly, on purpose</h3>
-        <p>The screen takes about fifteen seconds to change, the same way turning a page does. Add a line you liked so far, if you want. It'll sit there until you change it again.</p>
+      <div class="card reveal" style="--r:-0.6deg;">
+        <div class="num">3.</div>
+        <h3>it redraws, slowly, on purpose</h3>
+        <p>takes about fifteen to thirty seconds, kind of like turning a page. add a line you liked so far if you want.</p>
       </div>
     </div>
   </div>
 </section>
+
+<div class="torn flip"></div>
+
+<section class="how" id="uses" style="background:var(--paper);">
+  <div class="wrap">
+    <div class="how-head">
+      <h2>not just for books either</h2>
+      <p style="font-size:16px; color:#3a3730; margin-top:10px; max-width:52ch;">the frame doesn't know or care what's on it. it just shows whatever you point it at.</p>
+    </div>
+    <div class="uses-grid">
+      <div class="use-card reveal" style="--r:-1deg;">
+        <div class="sticker" style="transform:rotate(-8deg);">still real!</div>
+        <h3 style="font-size:18px; margin-bottom:8px;">your pet, your art, your people</h3>
+        <p style="font-size:14.5px; color:#3a3730;">upload literally any photo from your phone. resized automatically. no book required at all.</p>
+      </div>
+      <div class="use-card reveal" style="--r:0.7deg;">
+        <div class="sticker" style="transform:rotate(6deg);">extra setup</div>
+        <h3 style="font-size:18px; margin-bottom:8px;">now playing</h3>
+        <p style="font-size:14.5px; color:#3a3730;">shows the album art of whatever's on spotify. needs a little setup on your end, screenshots included, and you can book a quick call with us if you get stuck.</p>
+      </div>
+      <div class="use-card reveal" style="--r:-0.5deg;">
+        <div class="sticker" style="transform:rotate(-4deg);">auto</div>
+        <h3 style="font-size:18px; margin-bottom:8px;">moon, weather, space</h3>
+        <p style="font-size:14.5px; color:#3a3730;">a few quiet modes that need zero setup. calculated or fetched on their own, no fiddling required.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="torn"></div>
 
 <section class="pull">
   <div class="wrap">
-    <blockquote>it doesn't need to know everything you've read. it only needs to know what you're holding right now.</blockquote>
+    <blockquote class="reveal" style="--r:-0.3deg;">it doesn't need to know <mark>everything you've read.</mark><br>it just needs to know what you're holding right now.</blockquote>
   </div>
 </section>
 
-<hr class="rule" />
-
-<section class="how" id="uses">
-  <div class="wrap">
-    <div class="how-head">
-      <h2>not just for books</h2>
-      <p style="font-family:'Source Serif 4',serif; font-size:17px; color:#3A3B33; margin-top:14px; max-width:52ch;">The frame doesn't know or care what's on it — it just displays whatever you point it at. Reading is where this started, but it's not where it ends.</p>
-    </div>
-
-    <div class="step">
-      <div class="num">→</div>
-      <div>
-        <h3>your pet, your art, your people</h3>
-        <p>Upload any photo straight from your phone — resized to fit automatically. No book required at all; some people will only ever use it for this.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="num">→</div>
-      <div>
-        <h3>now playing</h3>
-        <p>Show the album art of whatever's playing on Spotify. This one needs a little extra setup on your end — we'll walk you through it, screenshots included, and you can always book a quick call with us if you get stuck.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="num">→</div>
-      <div>
-        <h3>tonight's moon, today's weather, this day in space</h3>
-        <p>A few quieter modes that need no setup at all — calculated or fetched automatically, just pick one and it looks after itself.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="rule" />
+<div class="torn deep"></div>
 
 <section class="faq" id="faq">
   <div class="wrap">
     <h2>the honest questions</h2>
-
     <div class="qa">
-      <div class="q">does it sync automatically with Goodreads or StoryGraph?</div>
-      <div class="a">No. There's no live API for either — this isn't a corner we cut, it doesn't exist to cut. You update it yourself in about ten seconds, which turns out to be about as accurate anyway.</div>
+      <div class="q">does it sync automatically with goodreads or storygraph?</div>
+      <div class="a">nope. there's no live api for either, this isn't a corner we cut, it just doesn't exist. you update it yourself in about ten seconds, which turns out to be pretty accurate anyway.</div>
     </div>
     <div class="qa">
-      <div class="q">what happens if I lose the QR sticker?</div>
-      <div class="a">Hold the button on the back of the frame — it'll show its setup code on screen. You can also type the code in by hand if the sticker's long gone.</div>
+      <div class="q">what happens if i lose the qr sticker?</div>
+      <div class="a">hold the button on the back of the frame, it'll show its setup code on screen. you can also just type the code in by hand if the sticker's long gone.</div>
     </div>
     <div class="qa">
       <div class="q">why does the screen take so long to change?</div>
-      <div class="a">It's e-paper, the same family of screen as an e-reader — no backlight, holds an image with almost no power. That's the tradeoff: it looks like paper, but it isn't built for anything fast.</div>
+      <div class="a">it's e paper, the same family of screen as an e reader, no backlight, holds an image with almost no power. that's the tradeoff, it looks like paper but it isn't built for anything fast.</div>
     </div>
     <div class="qa">
       <div class="q">is my library data sold or shared?</div>
-      <div class="a">No. What you set is stored to run the frame, nothing else. Full terms and a plain-language privacy note are linked below before you ever put down a deposit.</div>
+      <div class="a">no. what you set is stored to run the frame and that's it. terms and a plain language privacy note are linked below before you ever pay anything.</div>
+    </div>
+    <div class="qa">
+      <div class="q">does it need to stay plugged in?</div>
+      <div class="a">yes, for now, this version lives near an outlet so it can check for updates quickly instead of sipping battery slowly. think of it more like a lamp than a phone.</div>
     </div>
   </div>
 </section>
+
+<div class="torn"></div>
 
 <section class="reserve" id="preorder">
   <div class="wrap">
     <div class="reserve-box">
       <div>
         <h2>preorder now</h2>
-        <p>Ready to skip the wait? Pay now and lock in a spot in the first build batch — full price, no separate deposit step. Handled securely through Stripe; we never see or store your card details.</p>
+        <p>ready to skip the wait? pay now and lock in a spot in the first build batch, full price, no separate deposit step. handled securely through stripe, we never see or store your card details.</p>
       </div>
       <div class="price-block">
         <div class="amount">$319</div>
         <div class="toward">full price, first batch</div>
-        <!-- REPLACE href="#" below with your real Stripe Payment Link once created -->
-        <a class="btn solid" href="#" id="preorder-link" style="text-align:center; display:block;">preorder — pay now</a>
-        <div class="fine">secure checkout via Stripe</div>
+        <a class="btn solid" href="#" id="preorder-link" style="text-align:center; display:block;">preorder, pay now</a>
+        <div class="fine">secure checkout via stripe. shipping calculated at checkout for us, canada, and uk.</div>
       </div>
     </div>
   </div>
@@ -418,13 +336,13 @@
     <div class="reserve-box">
       <div>
         <h2>not ready yet? join the waitlist</h2>
-        <p>No payment, no commitment — just leave your email and you'll be the first to know about updates, restocks, and new modes.</p>
+        <p>no payment, no commitment, just leave your email and you'll be the first to know about updates, restocks, and new modes.</p>
       </div>
       <div class="price-block">
         <form id="waitlist-form" onsubmit="return joinWaitlist(event)">
           <input type="email" id="waitlist-email" required placeholder="you@example.com"
-            style="width:100%; box-sizing:border-box; padding:13px 15px; font-size:15px; font-family:'Source Sans 3',sans-serif; border:1.5px solid var(--line); border-radius:4px; background:#FBF9F2; color:var(--ink); outline:none; margin-bottom:12px;" />
-          <button type="submit" class="btn solid" style="width:100%; cursor:pointer;">join the waitlist</button>
+            style="width:100%; box-sizing:border-box; padding:13px 15px; font-size:15px; font-family:'Work Sans',sans-serif; border:2px solid var(--ink); border-radius:8px; background:#fdfbf5; color:var(--ink); outline:none; margin-bottom:12px;" />
+          <button type="submit" class="btn solid" style="width:100%; cursor:pointer; border:2.5px solid var(--plum);">join the waitlist</button>
         </form>
         <div id="waitlist-status" class="fine" style="margin-top:12px;"></div>
       </div>
@@ -432,9 +350,19 @@
   </div>
 </section>
 
+<div class="torn deep"></div>
+
+<section class="try">
+  <div class="wrap">
+    <h2>try the actual tool</h2>
+    <p>this is the real page a frame owner uses. search a title, pick a real cover, see it staged for the screen. try it yourself, no frame required.</p>
+    <iframe src="app.html" title="try the marginalia app"></iframe>
+  </div>
+</section>
+
 <footer>
-  <div class="wrap" style="flex-direction:column; align-items:flex-start;">
-    <div class="wrap" style="padding:0; width:100%; display:flex; justify-content:space-between; align-items:center;">
+  <div class="wrap">
+    <div class="top">
       <div class="fmark">marginalia</div>
       <div class="flinks">
         <a href="#">privacy</a>
@@ -442,7 +370,7 @@
         <a href="mailto:hello@example.com">contact</a>
       </div>
     </div>
-    <div class="fnote">a small, independently built object for readers. not affiliated with Goodreads, StoryGraph, or Fable — none of them offer the kind of access this would need, which is the whole reason this exists as a separate thing you update yourself.</div>
+    <div class="fnote">a small, independently built object for readers. not affiliated with goodreads, storygraph, or fable, none of them offer the kind of access this would need, which is the whole reason this exists as a separate thing you update yourself. international orders may be subject to your country's import duties, charged separately on delivery.</div>
   </div>
 </footer>
 
@@ -453,7 +381,7 @@
     const status = document.getElementById("waitlist-status");
     const btn = e.target.querySelector("button");
     btn.disabled = true;
-    btn.textContent = "joining…";
+    btn.textContent = "joining...";
     try {
       const res = await fetch("https://eframe.alliyaahmad3.workers.dev/waitlist", {
         method: "POST",
@@ -461,18 +389,26 @@
         body: JSON.stringify({ email: emailInput.value }),
       });
       if (!res.ok) throw new Error("failed");
-      status.textContent = "you're on the list — thank you.";
+      status.textContent = "you're on the list, thank you.";
       status.style.color = "var(--sage)";
       emailInput.value = "";
       btn.textContent = "joined";
     } catch {
-      status.textContent = "something went wrong — try again in a moment.";
-      status.style.color = "var(--burgundy)";
+      status.textContent = "something went wrong, try again in a moment.";
+      status.style.color = "var(--plum)";
       btn.disabled = false;
       btn.textContent = "join the waitlist";
     }
     return false;
   }
+
+  // scroll reveal, no library needed
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) entry.target.classList.add("in");
+    });
+  }, { threshold: 0.15 });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
 </script>
 
 </body>
