@@ -42,10 +42,10 @@ const MOCK_SHELF = [
 const MODES = [
   { key: "reading", title: "currently reading", tagline: "the book on your nightstand", auto: false, live: true },
   { key: "custom", title: "any photo", tagline: "pets, art, family — anything you upload", auto: false, live: true },
-  { key: "spotify", title: "now playing", tagline: "updates itself once connected", auto: true, live: false },
+  { key: "spotify", title: "now playing", tagline: "album art of whatever's playing on spotify", auto: true, live: true },
   { key: "moon", title: "moon phase", tagline: "tonight's sky, calculated — no setup", auto: true, live: false },
   { key: "weather", title: "today's weather", tagline: "your forecast, updates itself daily", auto: true, live: false },
-  { key: "nasa", title: "this day in space", tagline: "NASA's picture of the day, any date", auto: false, live: true },
+  { key: "nasa", title: "this day in space", tagline: "NASA's picture of the day, try your birthday", auto: false, live: true },
 ];
 
 function useDebounced(value, delay) {
@@ -155,14 +155,16 @@ function App() {
     localStorage.setItem("marginalia_frame_id", urlFrame.trim().toUpperCase());
   }
 
+  const spotifyBack = new URLSearchParams(window.location.search).get("spotify");
   const [step, setStep] = useState(() => {
+    if (spotifyBack === "connected") return 4;
     return localStorage.getItem("marginalia_frame_id") ? 1 : 0;
   });
   const [frameId, setFrameId] = useState(() => localStorage.getItem("marginalia_frame_id") || "");
-  const [mode, setMode] = useState(null);
-  const [chosen, setChosen] = useState(null);
+  const [mode, setMode] = useState(spotifyBack === "connected" ? "spotify" : null);
+  const [chosen, setChosen] = useState(spotifyBack === "connected" ? { title: "now playing", author: "spotify", art: <div style={{ textAlign: "center", fontSize: 54, color: COLORS.burgundy }}>♪</div> } : null);
   const [pushed, setPushed] = useState(false);
-  const [pushErr, setPushErr] = useState("");
+  const [pushErr, setPushErr] = useState(spotifyBack === "failed" ? "spotify connection didn't go through, try again" : "");
 
   const [method, setMethod] = useState(null);
   const [query, setQuery] = useState("");
@@ -207,8 +209,8 @@ function App() {
   const pickBook = (book) => { setChosen({ title: book.title, author: book.author, thumb: book.thumb }); setStep(3); };
 
   const fetchMoon = () => {
-    const { fraction, name } = getMoonPhase(new Date());
-    setChosen({ title: name, author: "tonight", art: <MoonArt fraction={fraction} /> });
+    // drop a moon photo at img/moon.jpg in your site folder and it shows up here and on the frame
+    setChosen({ title: "the moon", author: "tonight", thumb: "https://eframe.pages.dev/img/moon.jpg" });
     setStep(3);
   };
 
@@ -430,9 +432,9 @@ function App() {
 
         {step === 2 && mode === "spotify" && (
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>this mode needs a one-time Spotify login — after that, your frame updates on its own with whatever's playing, no manual step.</p>
-            <button onClick={() => { setChosen({ title: "Sample Track", author: "Sample Artist — demo preview", art: <div style={{ textAlign: "center", fontFamily: "'Fraunces', serif", fontSize: 13, color: COLORS.faint }}>album art will appear here once connected</div> }); setStep(3); }} style={btnStyle(true)}>connect Spotify (preview)</button>
-            <p style={{ fontSize: 11.5, color: COLORS.faint, marginTop: 14 }}>real login isn't wired up yet</p>
+            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>connect once and the frame shows the album art of whatever's playing on your spotify. when nothing's playing it keeps the last thing you listened to.</p>
+            {pushErr && <div style={{ fontSize: 12.5, color: COLORS.burgundy, marginBottom: 14, background: COLORS.paperDeep, padding: "10px 12px", borderRadius: 4 }}>{pushErr}</div>}
+            <a href={`${WORKER_BASE}/spotify/login/${frameId}`} target="_blank" rel="noopener" style={{ ...btnStyle(true), display: "block", boxSizing: "border-box", textDecoration: "none" }}>connect spotify</a>
           </div>
         )}
 
@@ -485,7 +487,7 @@ function App() {
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
               <EinkPreview cover={chosen.thumb} title={chosen.title} author={chosen.author} art={chosen.art} quote={mode === "reading" ? quote : null} />
             </div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.sage, marginBottom: 4 }}>sent to your frame</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.sage, marginBottom: 4 }}>{mode === "spotify" ? "spotify connected" : "sent to your frame"}</div>
             <p style={{ fontSize: 12.5, color: COLORS.faint, marginBottom: 24, lineHeight: 1.5 }}>next time, skip the code — just open this from your home screen.</p>
             <button onClick={reset} style={{ width: "100%", padding: "13px 16px", fontSize: 14, fontWeight: 600, border: `1.5px solid ${COLORS.burgundy}`, borderRadius: 4, background: "transparent", color: COLORS.burgundy, cursor: "pointer" }}>change mode or book</button>
           </div>

@@ -45,6 +45,40 @@ export default {
       return new Response(null, { headers: cors });
     }
 
+    // ---- Spotify "now playing" ----
+    // needs two secrets on this Worker: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
+    // and this redirect URI added in the Spotify dashboard: <your worker url>/spotify/callback
+    const spLogin = url.pathname.match(/^\/spotify\/login\/([A-Za-z0-9]{4,12})$/);
+    if (spLogin && request.method === "GET") {
+      if (!env.SPOTIFY_CLIENT_ID) return json({ error: "spotify isn't configured yet" }, 500, cors);
+      const nonce = crypto.randomUUID();
+      await env.FRAMES.put(`spstate:${nonce}`, spLogin[1].toUpperCase(), { expirationTtl: 600 });
+      const q = new URLSearchParams({
+        client_id: env.SPOTIFY_CLIENT_ID, response_type: "code",
+        redirect_uri: url.origin + "/spotify/callback",
+        scope: "user-read-currently-playing user-read-recently-played",
+        state: nonce, show_dialog: "true",
+      });
+      return Response.redirect("https://accounts.spotify.com/authorize?" + q.toString(), 302);
+    }
+    if (url.pathname === "/spotify/callback" && request.method === "GET") {
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state");
+      const frameId = state ? await env.FRAMES.get(`spstate:${state}`) : null;
+      if (!code || !frameId) return Response.redirect(url.origin + "/app.html?spotify=failed", 302);
+      await env.FRAMES.delete(`spstate:${state}`);
+      const tok = await spotifyToken(env, new URLSearchParams({
+        grant_type: "authorization_code", code, redirect_uri: url.origin + "/spotify/callback",
+      }));
+      if (!tok || !tok.refresh_token) return Response.redirect(url.origin + "/app.html?spotify=failed", 302);
+      await env.FRAMES.put(`spotify:${frameId}`, tok.refresh_token);
+      await env.FRAMES.put(frameId, JSON.stringify({
+        title: "now playing", author: "spotify", thumb: "", quote: "", mode: "spotify",
+        updatedAt: new Date().toISOString(),
+      }));
+      return Response.redirect(`${url.origin}/app.html?frame=${frameId}&spotify=connected`, 302);
+    }
+
     // POST /upload/:frameId  { imageBase64, contentType }
     // For the "custom photo" mode — pets, art, anything the person uploads.
     // Resize/compress happens client-side before this is called; we just
@@ -104,6 +138,7 @@ export default {
         "books.google.com",
         "books.googleusercontent.com",
         "apod.nasa.gov",
+        "eframe.pages.dev", // your own bundled images (moon photo etc)
       ];
       let thumbHost;
       try {
@@ -147,6 +182,13 @@ export default {
         return json({ error: "no book set yet for this frame" }, 404, cors);
       }
       const record = JSON.parse(stored);
+
+      // Spotify mode: look up what's playing at the moment the frame asks
+      if (record.mode === "spotify") {
+        const art = await spotifyArt(env, frameId);
+        if (!art) return json({ error: "nothing played yet" }, 404, cors);
+        record.thumb = art;
+      }
 
       // Custom-photo mode: serve the stored bytes directly, no external fetch
       if (record.mode === "custom") {
@@ -216,4 +258,45 @@ function json(obj, status, cors) {
     status,
     headers: { "Content-Type": "application/json", ...cors },
   });
+}
+
+async function spotifyToken(env, params) {
+  const r = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: "Basic " + btoa(env.SPOTIFY_CLIENT_ID + ":" + env.SPOTIFY_CLIENT_SECRET),
+    },
+    body: params,
+  });
+  return r.ok ? r.json() : null;
+}
+
+// album art of what's playing now; else last thing played; else the last art we saved
+async function spotifyArt(env, frameId) {
+  const refresh = await env.FRAMES.get(`spotify:${frameId}`);
+  if (!refresh) return null;
+  const tok = await spotifyToken(env, new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh }));
+  if (!tok) return await env.FRAMES.get(`spotlast:${frameId}`);
+  if (tok.refresh_token) await env.FRAMES.put(`spotify:${frameId}`, tok.refresh_token);
+  const h = { Authorization: "Bearer " + tok.access_token };
+  let art = null;
+  try {
+    const cur = await fetch("https://api.spotify.com/v1/me/player/currently-playing", { headers: h });
+    if (cur.status === 200) {
+      const d = await cur.json();
+      art = d && d.item && d.item.album && d.item.album.images && d.item.album.images[0] && d.item.album.images[0].url;
+    }
+    if (!art) {
+      const rec = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=1", { headers: h });
+      if (rec.ok) {
+        const d = await rec.json();
+        const t = d.items && d.items[0] && d.items[0].track;
+        art = t && t.album && t.album.images && t.album.images[0] && t.album.images[0].url;
+      }
+    }
+  } catch {}
+  if (art) await env.FRAMES.put(`spotlast:${frameId}`, art);
+  else art = await env.FRAMES.get(`spotlast:${frameId}`);
+  return art;
 }
