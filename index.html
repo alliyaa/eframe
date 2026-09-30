@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="a tiny color e-paper frame that shows the cover of whatever you're reading. update it from your phone in ten seconds. no app, no account." />
+<meta property="og:title" content="marginalia: a frame for what you're reading" />
+<meta property="og:description" content="a tiny color e-paper frame that shows the cover of whatever's on your nightstand. update it from your phone in ten seconds." />
+<meta property="og:image" content="https://eframe.alliyaahmad3.workers.dev/img/kiterunner.jpg" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
 <title>marginalia :: a frame for what you're reading</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@500;700&family=Work+Sans:wght@400;500;600&display=swap');
@@ -159,6 +165,37 @@
   footer .fnote{ font-size:12px; color:var(--faint); max-width:640px; margin-top:12px; }
 
   @media (max-width:820px){ .hero-grid{ grid-template-columns:1fr; } .polaroid-wrap{ order:-1; margin-bottom:10px; } }
+
+  /* real photos */
+  .torn.plum{ background:var(--plum-deep); }
+  .shots{ display:grid; grid-template-columns:repeat(3,1fr); gap:30px; margin-top:34px; }
+  .shot{ background:#fff; padding:12px 12px 16px; box-shadow:0 16px 30px -14px rgba(0,0,0,0.4); position:relative; }
+  .shot img{ width:100%; aspect-ratio:4/5; object-fit:cover; display:block; }
+  .shot .cap{ font-family:'Caveat',cursive; font-size:21px; text-align:center; margin-top:10px; }
+  .use-photo{ width:100%; aspect-ratio:4/3; object-fit:cover; border:2px solid var(--ink); border-radius:8px; margin-bottom:14px; display:block; }
+  @media (max-width:820px){ .shots{ grid-template-columns:1fr; max-width:360px; margin-left:auto; margin-right:auto; } }
+
+  /* under the hood */
+  section.hood{ background:var(--plum-deep); color:var(--paper); padding:56px 0 64px; position:relative; z-index:2; }
+  .hood .kicker{ color:var(--yellow); }
+  .hood h2{ font-size:clamp(28px,3.6vw,38px); max-width:20ch; }
+  .hood-grid{ display:grid; grid-template-columns:0.9fr 1.1fr; gap:44px; margin-top:34px; align-items:center; }
+  .hood .shot .cap{ color:var(--ink); }
+  .spec{ list-style:none; margin:0; padding:0; }
+  .spec li{ padding:14px 0; border-top:2px dashed rgba(243,237,223,0.28); font-size:15px; color:#e6dcc8; }
+  .spec li:last-child{ border-bottom:2px dashed rgba(243,237,223,0.28); }
+  .spec b{ display:block; font-family:'Bricolage Grotesque',sans-serif; font-size:17px; color:var(--paper); margin-bottom:2px; }
+  .flow{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:44px; counter-reset:f; }
+  .node{ background:var(--paper); color:var(--ink); border:2.5px solid var(--ink); border-radius:8px; padding:16px; box-shadow:4px 4px 0 var(--yellow); position:relative; font-size:13.5px; line-height:1.45; }
+  .node h3{ font-size:16px; margin-bottom:4px; }
+  .node:not(:last-child)::after{ content:'\2192'; position:absolute; right:-17px; top:50%; transform:translateY(-50%); color:var(--yellow); font-size:22px; font-weight:800; z-index:3; }
+  .hood .fine{ margin-top:26px; font-size:14px; color:#cfc4ac; max-width:70ch; }
+  @media (max-width:820px){ .hood-grid{ grid-template-columns:1fr; } .flow{ grid-template-columns:1fr; } .node:not(:last-child)::after{ content:'\2193'; right:auto; left:50%; top:auto; bottom:-24px; transform:translateX(-50%); } }
+  .phone-demo{ margin:44px auto 0; text-align:center; }
+  .phone-demo video{ width:250px; max-width:70%; border:3px solid var(--ink); border-radius:26px; box-shadow:6px 6px 0 var(--ink); background:var(--paper); display:block; margin:0 auto 12px; }
+  .phone-demo .hand{ font-size:21px; color:var(--plum); }
+  .why40{ margin-top:14px; font-size:14px; color:#e6dcc8; max-width:70ch; }
+  .nosub{ font-size:13px; font-weight:600; color:var(--sage); margin-top:6px; }
 </style>
 </head>
 <body>
@@ -170,6 +207,7 @@
     <div class="wordmark">margin<span>alia</span></div>
     <div class="links">
       <a href="#how">how it works</a>
+      <a href="#hood">under the hood</a>
       <a href="#uses">other uses</a>
       <a href="#faq">questions</a>
       <a href="#preorder">preorder</a>
@@ -193,18 +231,10 @@
       <div class="tape" style="top:-10px; left:20px; transform:rotate(-8deg);"></div>
       <div class="tape" style="bottom:30px; right:-6px; transform:rotate(12deg);"></div>
       <div class="polaroid">
-        <video autoplay muted loop playsinline class="fallback-shot" onerror="this.style.display='none'; document.getElementById('mock-fallback').style.display='flex';">
-          <source src="demo.mp4" type="video/mp4" />
+        <video autoplay muted loop playsinline class="fallback-shot" poster="img/demo-poster.jpg">
+          <source src="marginalia-frame-demo.mp4" type="video/mp4" onerror="this.parentNode.style.display='none'; document.getElementById('mock-fallback').style.display='block';" />
         </video>
-        <div id="mock-fallback" class="fallback-shot" style="display:none;">
-          <div class="frame-screen">
-            <div class="frame-cover"></div>
-            <div class="frame-caption">
-              <div class="t">piranesi</div>
-              <div class="a">susanna clarke</div>
-            </div>
-          </div>
-        </div>
+        <img id="mock-fallback" class="fallback-shot" style="display:none;" src="img/hero.jpg" alt="the frame showing piranesi by susanna clarke" />
         <div class="cap">currently reading, obviously</div>
       </div>
     </div>
@@ -212,6 +242,18 @@
 </header>
 
 <div class="torn"></div>
+
+<section class="how" style="background:var(--paper); padding-top:20px;">
+  <div class="wrap">
+    <h2>the real frame, on a real shelf</h2>
+    <p style="font-size:16px; color:#3a3730; margin-top:10px; max-width:52ch;">no renders. these are photos of the one on my table, taken with a phone in bad lighting.</p>
+    <div class="shots">
+      <div class="shot reveal" style="--r:-2deg;"><div class="tape" style="top:-10px; left:calc(50% - 35px); transform:rotate(-4deg);"></div><img src="img/kiterunner.jpg" alt="frame showing the kite runner" loading="lazy" /><div class="cap">kite runner, mid-book</div></div>
+      <div class="shot reveal" style="--r:1.5deg;"><div class="tape" style="top:-10px; left:calc(50% - 35px); transform:rotate(5deg);"></div><img src="img/piranesi.jpg" alt="frame showing piranesi beside two stacks of books" loading="lazy" /><div class="cap">piranesi, again</div></div>
+      <div class="shot reveal" style="--r:-1deg;"><div class="tape" style="top:-10px; left:calc(50% - 35px); transform:rotate(-6deg);"></div><img src="img/bunny.jpg" alt="frame showing a photo of a rabbit" loading="lazy" /><div class="cap">or your rabbit. no judgment.</div></div>
+    </div>
+  </div>
+</section>
 
 <section class="note">
   <div class="wrap">
@@ -245,10 +287,40 @@
         <p>takes about fifteen to thirty seconds, kind of like turning a page. add a line you liked so far if you want.</p>
       </div>
     </div>
+    <div class="phone-demo reveal" style="--r:0.6deg;">
+      <video autoplay muted loop playsinline preload="metadata" poster="img/phone-poster.jpg"><source src="marginalia-phone-demo.mp4" type="video/mp4" /></video>
+      <div class="hand">that's the whole thing. real screen recording, no edits to speed.</div>
+    </div>
   </div>
 </section>
 
-<div class="torn flip"></div>
+<div class="torn plum"></div>
+
+<section class="hood" id="hood">
+  <div class="wrap">
+    <span class="kicker">what the $319 actually is</span>
+    <h2>a lot of quiet engineering for ten seconds of effort</h2>
+    <div class="hood-grid">
+      <div class="shot reveal" style="--r:-1.5deg;"><div class="tape" style="top:-10px; left:calc(50% - 35px); transform:rotate(-4deg);"></div><img src="img/inside.jpg" alt="the inside of the frame: esp32-s3 board, e-paper ribbon, battery" loading="lazy" /><div class="cap">the back of the frame. yes, really.</div></div>
+      <ul class="spec">
+        <li><b>real hardware, not a repurposed tablet</b>an esp32-s3 board with wifi, usb-c, and a color e-paper panel that holds the image with zero power.</li>
+        <li><b>a real wood frame</b>it sits on a shelf like a frame, not like a gadget.</li>
+        <li><b>a hosted backend that stays running</b>book search, cover matching, photo upload and resizing, all handled for you.</li>
+        <li><b>a human you can reach</b>stuck on setup? book a quick call, it's just me.</li>
+      </ul>
+    </div>
+    <div class="flow">
+      <div class="node reveal"><h3>your phone</h3>a plain web page. pick a book or upload a photo, resized before it leaves your phone.</div>
+      <div class="node reveal"><h3>our server</h3>runs on cloudflare's edge network. stores one tiny record per frame. no account, no login.</div>
+      <div class="node reveal"><h3>the frame</h3>checks in every so often, asks "anything new?", and downloads the image directly.</div>
+      <div class="node reveal"><h3>the screen</h3>redraws once, slowly, then holds it. like a page that stays turned.</div>
+    </div>
+    <p class="why40"><b>why not a $40 frame?</b> a $40 digital frame is a backlit screen showing photos you loaded onto it. this is a color e-paper display that holds an image on zero power, a hosted backend that finds covers for you, and a real wood frame, built and supported by one person.</p>
+    <p class="fine">the server only accepts images from trusted sources, and nothing is tracked in the background. it only knows what you last told it.</p>
+  </div>
+</section>
+
+<div class="torn flip plum"></div>
 
 <section class="how" id="uses" style="background:var(--paper);">
   <div class="wrap">
@@ -259,6 +331,7 @@
     <div class="uses-grid">
       <div class="use-card reveal" style="--r:-1deg;">
         <div class="sticker" style="transform:rotate(-8deg);">still real!</div>
+        <img class="use-photo" src="img/pet.jpg" alt="frame showing a photo of a rabbit" loading="lazy" />
         <h3 style="font-size:18px; margin-bottom:8px;">your pet, your art, your people</h3>
         <p style="font-size:14.5px; color:#3a3730;">upload literally any photo from your phone. resized automatically. no book required at all.</p>
       </div>
@@ -306,6 +379,14 @@
       <div class="a">no. what you set is stored to run the frame and that's it. terms and a plain language privacy note are linked below before you ever pay anything.</div>
     </div>
     <div class="qa">
+      <div class="q">when does it ship?</div>
+      <div class="a">first batch orders ship within <span data-cfg="ship"></span> of your preorder. you'll get an email with tracking the day it goes out.</div>
+    </div>
+    <div class="qa">
+      <div class="q">what if i don't like it?</div>
+      <div class="a"><span data-cfg="returns"></span>-day returns, no reasons needed. it also comes with a <span data-cfg="warranty"></span> warranty against hardware defects. full details on the <a href="policies.html#shipping">shipping and returns page</a>.</div>
+    </div>
+    <div class="qa">
       <div class="q">does it need to stay plugged in?</div>
       <div class="a">yes, for now, this version lives near an outlet so it can check for updates quickly instead of sipping battery slowly. think of it more like a lamp than a phone.</div>
     </div>
@@ -324,6 +405,7 @@
       <div class="price-block">
         <div class="amount">$319</div>
         <div class="toward">full price, first batch</div>
+        <div class="nosub">no subscription, no monthly fee</div>
         <a class="btn solid" href="#" id="preorder-link" style="text-align:center; display:block;">preorder, pay now</a>
         <div class="fine">secure checkout via stripe. shipping calculated at checkout for us, canada, and uk.</div>
       </div>
@@ -355,7 +437,7 @@
 <section class="try">
   <div class="wrap">
     <h2>try the actual tool</h2>
-    <p>this is the real page a frame owner uses. search a title, pick a real cover, see it staged for the screen. try it yourself, no frame required.</p>
+    <p>this is the real page a frame owner uses. when it asks for a frame code, type <b>TEST01</b> and try it: search a title, pick a real cover, see it staged for the screen. no frame required.</p>
     <iframe src="app.html" title="try the marginalia app"></iframe>
   </div>
 </section>
@@ -365,9 +447,10 @@
     <div class="top">
       <div class="fmark">marginalia</div>
       <div class="flinks">
-        <a href="#">privacy</a>
-        <a href="#">terms</a>
-        <a href="mailto:hello@example.com">contact</a>
+        <a href="policies.html#privacy">privacy</a>
+        <a href="policies.html#terms">terms</a>
+        <a href="policies.html#shipping">shipping &amp; returns</a>
+        <a href="#" data-cfg-mail>contact</a>
       </div>
     </div>
     <div class="fnote">a small, independently built object for readers. not affiliated with goodreads, storygraph, or fable, none of them offer the kind of access this would need, which is the whole reason this exists as a separate thing you update yourself. international orders may be subject to your country's import duties, charged separately on delivery.</div>
@@ -375,6 +458,20 @@
 </footer>
 
 <script>
+  // ===== EDIT THESE, everything on the site reads from here =====
+  const CONFIG = {
+    email: "hello@example.com",       // your real support email
+    stripeLink: "",                   // paste your Stripe payment link; blank = button scrolls to the waitlist
+    ship: "6 to 8 weeks",
+    returns: "30",
+    warranty: "1 year"
+  };
+  document.querySelectorAll("[data-cfg]").forEach(el => el.textContent = CONFIG[el.dataset.cfg]);
+  document.querySelectorAll("[data-cfg-mail]").forEach(el => el.href = "mailto:" + CONFIG.email);
+  const pre = document.getElementById("preorder-link");
+  if (CONFIG.stripeLink) { pre.href = CONFIG.stripeLink; }
+  else { pre.href = "#waitlist"; pre.textContent = "preorders opening soon, join the waitlist"; }
+
   async function joinWaitlist(e) {
     e.preventDefault();
     const emailInput = document.getElementById("waitlist-email");

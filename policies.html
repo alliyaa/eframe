@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>marginalia :: privacy, terms, shipping</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Work+Sans:wght@400;600&display=swap');
+body{margin:0;background:#F3EDDF;color:#20201d;font:16px/1.65 'Work Sans',sans-serif}main{max-width:680px;margin:0 auto;padding:40px 26px 80px}
+h1,h2{font-family:'Bricolage Grotesque',sans-serif;letter-spacing:-.02em}h2{margin-top:48px;border-top:2.5px dashed #C9BEA0;padding-top:28px}a{color:#450C3F}.back{font-weight:600}</style></head><body><main>
+<a class="back" href="index.html">&larr; marginalia</a><h1>the fine print, in plain language</h1>
+<p>last updated September 2026. this is a small independent project, so this is written to be read, not to hide things.</p>
+<h2 id="privacy">privacy</h2>
+<p>what we store: your email if you join the waitlist; and, for each frame, a short record of what it's showing (title, author, cover link, an optional line) or the photo you uploaded to it. that's it.</p>
+<p>what we don't do: no accounts, no tracking of what you read in the background, no selling or sharing your data. payments are handled by stripe, we never see or store your card details. to delete your email or your frame's data, email <a href="#" data-cfg-mail>us</a> and it's gone.</p>
+<h2 id="terms">terms</h2>
+<p>marginalia is a physical frame plus a hosted service that fetches images to it. don't upload anything you don't have the right to display. the frame is provided as-is beyond the warranty below.</p>
+<h2 id="shipping">shipping and returns</h2>
+<p>preorders ship within <span data-cfg="ship"></span>, to the us, canada and uk. shipping is calculated at checkout. international orders may owe import duties on delivery, charged separately by your country.</p>
+<p>you can return the frame within <span data-cfg="returns"></span> days of delivery for a refund of the frame price, no reasons needed. email us first and we'll send instructions. hardware defects are covered for <span data-cfg="warranty"></span> from delivery, we'll repair or replace.</p>
+</main><script>
+const CONFIG={email:"hello@example.com",ship:"6 to 8 weeks",returns:"30",warranty:"1 year"}; // keep in sync with index.html
+document.querySelectorAll("[data-cfg]").forEach(e=>e.textContent=CONFIG[e.dataset.cfg]);
+document.querySelectorAll("[data-cfg-mail]").forEach(e=>e.href="mailto:"+CONFIG.email);
+</script></body></html>
