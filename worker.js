@@ -277,7 +277,7 @@ async function spotifyArt(env, frameId) {
   const refresh = await env.FRAMES.get(`spotify:${frameId}`);
   if (!refresh) return null;
   const tok = await spotifyToken(env, new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh }));
-  if (!tok) return await env.FRAMES.get(`spoStlast:${frameId}`);
+  if (!tok) return await env.FRAMES.get(`spotlast:${frameId}`);
   if (tok.refresh_token) await env.FRAMES.put(`spotify:${frameId}`, tok.refresh_token);
   const h = { Authorization: "Bearer " + tok.access_token };
   let art = null;
