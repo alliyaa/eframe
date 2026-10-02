@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="why i made marginalia: a frame for the book you're reading right now, inspired by bookstore and library display stands." />
+<title>marginalia :: why i made it</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@500;700&family=Work+Sans:wght@400;500;600&display=swap');
+  :root{ --ink:#20201d; --paper:#F3EDDF; --paper-deep:#E9E0CB; --plum:#450C3F; --yellow:#F2C14E; --coral:#FF6F59; --line:#C9BEA0; --faint:#6b6558; }
+  *{ box-sizing:border-box; }
+  html{ overflow-x:clip; -webkit-text-size-adjust:100%; }
+  body{ margin:0; background:var(--paper); color:var(--ink); font:17px/1.6 'Work Sans',sans-serif; overflow-x:clip; }
+  h1,h2{ font-family:'Bricolage Grotesque',sans-serif; font-weight:800; letter-spacing:-0.02em; margin:0; }
+  .hand{ font-family:'Caveat',cursive; }
+  a{ color:inherit; }
+  .wrap{ max-width:1060px; margin:0 auto; padding:0 26px; }
+
+  nav{ position:sticky; top:0; z-index:40; background:var(--paper); border-bottom:2px solid var(--ink); }
+  nav .wrap{ display:flex; align-items:center; justify-content:space-between; padding:16px 26px; }
+  .wordmark{ font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:24px; text-decoration:none; }
+  .wordmark span{ color:var(--plum); }
+  nav .back{ font-size:14px; font-weight:600; text-decoration:none; min-height:44px; display:inline-flex; align-items:center; }
+  nav .back:hover{ color:var(--plum); }
+
+  .kicker{ font-family:'Caveat',cursive; font-size:22px; color:var(--plum); display:inline-block; transform:rotate(-2deg); margin-bottom:6px; }
+  .hero{ padding:56px 0 30px; }
+  .hero-grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:50px; align-items:center; }
+  h1{ font-size:clamp(34px,5vw,52px); line-height:1.06; }
+  .lede{ margin-top:18px; font-size:18px; max-width:46ch; color:#333026; }
+
+  .polaroid-wrap{ display:flex; justify-content:center; position:relative; }
+  .polaroid{ background:#fff; padding:14px 14px 40px; width:270px; transform:rotate(3deg); box-shadow:0 18px 34px -14px rgba(0,0,0,.35); position:relative; }
+  .polaroid video{ width:100%; display:block; aspect-ratio:5/6; object-fit:cover; background:#2E0829; }
+  .polaroid .cap{ font-family:'Caveat',cursive; font-size:20px; text-align:center; margin-top:10px; }
+  .tape{ position:absolute; width:70px; height:24px; background:repeating-linear-gradient(45deg,rgba(255,255,255,.5) 0 6px,rgba(69,12,63,.25) 6px 12px); background-color:rgba(242,193,78,.55); box-shadow:0 2px 4px rgba(0,0,0,.08); z-index:2; }
+
+  .story{ padding:34px 0 20px; }
+  .story .wrap{ max-width:680px; }
+  .story h2{ font-size:clamp(24px,3.4vw,32px); margin:44px 0 14px; }
+  .story h2:first-child{ margin-top:0; }
+  .story p{ font-size:18px; line-height:1.7; color:#2c2a22; margin:0 0 18px; }
+  mark{ background:var(--yellow); padding:2px 6px; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
+
+  .reasons{ background:var(--paper-deep); padding:50px 0 56px; margin-top:30px; }
+  .reasons h2{ font-size:clamp(26px,3.6vw,34px); }
+  .reasons .sub{ margin:10px 0 0; max-width:54ch; color:#3a3730; }
+  .grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:22px; margin-top:32px; }
+  .card{ background:#fff; border:2.5px solid var(--ink); border-radius:6px; padding:22px; box-shadow:5px 5px 0 var(--ink); }
+  .card h3{ font-family:'Bricolage Grotesque',sans-serif; font-size:19px; margin:0 0 6px; }
+  .card p{ margin:0; font-size:15px; color:#3a3730; }
+
+  .close{ padding:56px 0 64px; text-align:center; }
+  .close p{ font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:clamp(22px,3vw,30px); line-height:1.35; max-width:22ch; margin:0 auto 24px; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:13px 24px; font-size:15px; font-weight:700; text-decoration:none; border-radius:999px; border:2.5px solid var(--ink); transform:rotate(-1deg); }
+  .btn.solid{ background:var(--plum); color:var(--paper); border-color:var(--plum); }
+  .btn.ghost{ background:transparent; }
+  .row{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+
+  footer{ padding:30px 0 44px; border-top:2.5px solid var(--ink); }
+  footer .wrap{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px 18px; }
+  footer .fmark{ font-family:'Caveat',cursive; font-size:20px; }
+  footer .flinks{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--faint); }
+  footer .flinks a{ text-decoration:none; display:inline-flex; align-items:center; min-height:36px; }
+
+  @media (max-width:820px){
+    .wrap{ padding-left:20px; padding-right:20px; }
+    nav .wrap{ padding:10px 20px; }
+    .hero{ padding:34px 0 16px; }
+    .hero-grid{ grid-template-columns:1fr; gap:28px; }
+    .polaroid-wrap{ order:-1; }
+    .polaroid{ width:min(270px,76vw); }
+    .grid{ grid-template-columns:1fr; }
+    .story p{ font-size:17px; }
+  }
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="wordmark" href="index.html">margin<span>alia</span></a>
+    <a class="back" href="index.html">&larr; back to the frame</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="kicker">why i made this</span>
+      <h1>i wanted a way to show what i'm reading, and actually talk about it</h1>
+      <p class="lede">it started at half price books.</p>
+    </div>
+    <div class="polaroid-wrap">
+      <div class="tape" style="top:-10px; left:20px; transform:rotate(-8deg);"></div>
+      <div class="polaroid">
+        <video autoplay muted loop playsinline poster="img/demo-poster.jpg"><source src="marginalia-frame-demo.mp4" type="video/mp4" /></video>
+        <div class="cap">the whole idea, on a shelf</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="story">
+  <div class="wrap">
+    <h2>the stands at half price books</h2>
+    <p>i kept noticing the little display stands in bookstores and libraries. a few books propped up face-out: a pick, something new, something worth a look. when they want to show different books, they swap them out one by one.</p>
+    <p>i remember thinking: what if you could change the whole thing <mark>all at once</mark>?</p>
+
+    <h2>then i saw people doing it at home</h2>
+    <p>the same idea was on people's own bookshelves. you can find those black display holders on etsy and amazon, with a book propped up facing out like a tiny gallery piece. people clearly wanted their shelves to say something about what they love.</p>
+
+    <h2>so i made one that changes in ten seconds</h2>
+    <p>marginalia is a small e-paper frame that shows the cover of the book you're reading right now. start something new, update it from your phone, done. no app, no account.</p>
+    <p>what i like most is that it gives you a reason to <mark>talk about the book you're in the middle of</mark>. someone glances at your shelf and asks, "oh, how is that one?" it's also just a nice thing to have on a shelf.</p>
+  </div>
+</section>
+
+<section class="reasons">
+  <div class="wrap">
+    <h2>other reasons you might want one</h2>
+    <p class="sub">these are the ones i've thought of so far. if you have a better one, i'd like to hear it.</p>
+    <div class="grid">
+      <div class="card"><h3>a shelf that says something</h3><p>it's decoration with a point of view, and it changes when you do.</p></div>
+      <div class="card"><h3>a conversation starter</h3><p>friends and visitors see what you're reading without you saying a word, and ask about it.</p></div>
+      <div class="card"><h3>your pet, your people</h3><p>upload any photo from your phone and swap it whenever you like. no book required.</p></div>
+      <div class="card"><h3>bookstores, libraries, book clubs</h3><p>show a staff pick, this month's club book, or a gift for a reader who always has one on the go.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="close">
+  <div class="wrap">
+    <p>show off whatever you're actually reading.</p>
+    <div class="row">
+      <a class="btn solid" href="index.html#preorder">preorder it</a>
+      <a class="btn ghost" href="index.html#waitlist">join the waitlist</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fmark">marginalia</div>
+    <div class="flinks">
+      <a href="index.html">home</a>
+      <a href="policies.html#privacy">privacy</a>
+      <a href="policies.html#terms">terms</a>
+      <a href="policies.html#shipping">shipping &amp; returns</a>
+      <a href="#" data-cfg-mail>contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const CONFIG={email:"alliyaahmad3@gmail.com"}; // keep in sync with index.html
+document.querySelectorAll("[data-cfg-mail]").forEach(e=>e.href="mailto:"+CONFIG.email);
+</script>
+</body>
+</html>
