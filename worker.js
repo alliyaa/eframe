@@ -25,12 +25,31 @@
  * this same eframe.alliyaahmad3.workers.dev domain serves the whole site,
  * not just the API. One URL for everything, no separate Pages link to juggle.
  *
+ *  - POST /checkout               <- creates a real Stripe Checkout Session,
+ *                                     scoped to ONE shipping country at a time
+ *                                     so the address typed and the shipping
+ *                                     rate charged can never mismatch (unlike
+ *                                     a static Payment Link, which lets anyone
+ *                                     pick any rate regardless of address).
+ *                                     Needs a STRIPE_SECRET_KEY secret set on
+ *                                     this Worker (Settings -> Variables ->
+ *                                     add, mark as "Encrypt"). NEVER put this
+ *                                     key in any public file.
+ *
  * No auth on this MVP version — frameId itself is the "secret."
  * Fine for a first prototype; revisit before real customers.
  */
 
 // EDIT THIS if your Pages project's URL is ever different
 const PAGES_ORIGIN = "https://eframe.pages.dev";
+
+// Shipping, in cents, per allowed country. Edit these if your real costs change.
+const SHIPPING_RATES = {
+  US: { amount: 1500, label: "US Shipping" },
+  CA: { amount: 3500, label: "Canada Shipping" },
+  GB: { amount: 4000, label: "UK Shipping" },
+};
+const PRODUCT_PRICE_CENTS = 31900; // $319.00 — keep in sync with the site's displayed price
 
 export default {
   async fetch(request, env) {
@@ -214,6 +233,61 @@ export default {
       const headers = new Headers(cors);
       headers.set("Content-Type", imgResp.headers.get("Content-Type") || "image/jpeg");
       return new Response(imgResp.body, { status: 200, headers });
+    }
+
+    // POST /checkout  { country: "US" | "CA" | "GB" }
+    // Creates a Checkout Session scoped to exactly ONE country and its
+    // matching shipping rate, so the customer physically cannot select a
+    // mismatched combo — Stripe will only let them type an address in the
+    // one country we told it to allow.
+    if (url.pathname === "/checkout" && request.method === "POST") {
+      if (!env.STRIPE_SECRET_KEY) {
+        return json({ error: "checkout isn't configured yet" }, 500, cors);
+      }
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "bad json body" }, 400, cors);
+      }
+      const country = (body.country || "").toUpperCase();
+      const rate = SHIPPING_RATES[country];
+      if (!rate) {
+        return json({ error: "unsupported shipping country" }, 400, cors);
+      }
+
+      const params = new URLSearchParams();
+      params.set("mode", "payment");
+      params.set("success_url", url.origin + "/?checkout=success");
+      params.set("cancel_url", url.origin + "/?checkout=cancelled");
+      params.set("shipping_address_collection[allowed_countries][0]", country);
+      params.set("line_items[0][quantity]", "1");
+      params.set("line_items[0][price_data][currency]", "usd");
+      params.set("line_items[0][price_data][unit_amount]", String(PRODUCT_PRICE_CENTS));
+      params.set("line_items[0][price_data][product_data][name]", "Marginalia Frame");
+      params.set("shipping_options[0][shipping_rate_data][type]", "fixed_amount");
+      params.set("shipping_options[0][shipping_rate_data][fixed_amount][amount]", String(rate.amount));
+      params.set("shipping_options[0][shipping_rate_data][fixed_amount][currency]", "usd");
+      params.set("shipping_options[0][shipping_rate_data][display_name]", rate.label);
+
+      let stripeResp;
+      try {
+        stripeResp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + env.STRIPE_SECRET_KEY,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
+        });
+      } catch {
+        return json({ error: "could not reach Stripe" }, 502, cors);
+      }
+      const session = await stripeResp.json();
+      if (!stripeResp.ok) {
+        return json({ error: session.error ? session.error.message : "Stripe error" }, 502, cors);
+      }
+      return json({ url: session.url }, 200, cors);
     }
 
     // POST /waitlist  { email }

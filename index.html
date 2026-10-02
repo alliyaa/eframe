@@ -406,8 +406,15 @@
         <div class="amount">$319</div>
         <div class="toward">full price, first batch</div>
         <div class="nosub">no subscription, no monthly fee</div>
-        <a class="btn solid" href="#" id="preorder-link" style="text-align:center; display:block;">preorder, pay now</a>
-        <div class="fine">secure checkout via stripe. shipping calculated at checkout for us, canada, and uk.</div>
+        <label style="display:block; font-size:13px; font-weight:600; margin:14px 0 6px;">shipping to</label>
+        <select id="checkout-country" style="width:100%; padding:11px 13px; font-size:15px; font-family:'Work Sans',sans-serif; border:2px solid var(--ink); border-radius:8px; background:#fdfbf5; color:var(--ink); margin-bottom:12px;">
+          <option value="US">united states ($15 shipping)</option>
+          <option value="CA">canada ($35 shipping)</option>
+          <option value="GB">united kingdom ($40 shipping)</option>
+        </select>
+        <button type="button" onclick="startCheckout()" id="preorder-link" class="btn solid" style="width:100%; cursor:pointer; border:2.5px solid var(--plum);">preorder, pay now</button>
+        <div id="checkout-status" class="fine" style="margin-top:10px;"></div>
+        <div class="fine">secure checkout via stripe. shipping and address are matched automatically, no mismatches possible.</div>
       </div>
     </div>
   </div>
@@ -461,16 +468,39 @@
   // ===== EDIT THESE, everything on the site reads from here =====
   const CONFIG = {
     email: "alliyaahmad3@gmail.com",       // your real support email
-    stripeLink: "",                   // paste your Stripe payment link; blank = button scrolls to the waitlist
     ship: "6 to 8 weeks",
     returns: "30",
     warranty: "1 year"
   };
   document.querySelectorAll("[data-cfg]").forEach(el => el.textContent = CONFIG[el.dataset.cfg]);
   document.querySelectorAll("[data-cfg-mail]").forEach(el => el.href = "mailto:" + CONFIG.email);
-  const pre = document.getElementById("preorder-link");
-  if (CONFIG.stripeLink) { pre.href = CONFIG.stripeLink; }
-  else { pre.href = "#waitlist"; pre.textContent = "preorders opening soon, join the waitlist"; }
+
+  // Real checkout: asks the Worker to create a Stripe Checkout Session
+  // scoped to the chosen country, so address and shipping rate always match.
+  async function startCheckout() {
+    const country = document.getElementById("checkout-country").value;
+    const btn = document.getElementById("preorder-link");
+    const status = document.getElementById("checkout-status");
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = "taking you to checkout...";
+    status.textContent = "";
+    try {
+      const res = await fetch("https://eframe.alliyaahmad3.workers.dev/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "checkout failed");
+      window.location.href = data.url;
+    } catch (err) {
+      status.textContent = "couldn't start checkout, try again in a moment.";
+      status.style.color = "var(--plum)";
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
 
   async function joinWaitlist(e) {
     e.preventDefault();
