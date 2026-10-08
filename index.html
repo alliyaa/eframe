@@ -6,7 +6,7 @@
 <meta name="description" content="a tiny color e-paper frame that shows the cover of whatever you're reading. update it from your phone in ten seconds. no app, no account." />
 <meta property="og:title" content="marginalia: a frame for what you're reading" />
 <meta property="og:description" content="a tiny color e-paper frame that shows the cover of whatever's on your nightstand. update it from your phone in ten seconds." />
-<meta property="og:image" content="https://eframe.alliyaahmad3.workers.dev/img/kiterunner.jpg" />
+<meta property="og:image" content="https://alliyaspages.com/img/kiterunner.jpg" />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
 <title>marginalia :: a frame for what you're reading</title>
@@ -540,7 +540,7 @@
     btn.textContent = "taking you to checkout...";
     status.textContent = "";
     try {
-      const res = await fetch("https://eframe.alliyaahmad3.workers.dev/checkout", {
+      const res = await fetch("/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ country }),
@@ -564,7 +564,7 @@
     btn.disabled = true;
     btn.textContent = "joining...";
     try {
-      const res = await fetch("https://eframe.alliyaahmad3.workers.dev/waitlist", {
+      const res = await fetch("/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailInput.value }),

@@ -21,7 +21,7 @@
 const { useState, useEffect } = React;
 
 // ---- EDIT THIS if your Worker URL changes ----
-const WORKER_BASE = "https://eframe.alliyaahmad3.workers.dev";
+const WORKER_BASE = window.location.origin;
 
 // EDIT THIS if you ever need to rotate the key — restricted to Books API only in Google Cloud Console
 const GOOGLE_BOOKS_API_KEY = "AIzaSyDHeqkQz3R1ZqyR2YXa2HsmA98uC6JXsNA";
