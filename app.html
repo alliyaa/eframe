@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>marginalia — set your frame</title>
+<title>marginalia :: set your frame</title>
 <link rel="manifest" href="data:application/json,{%22name%22:%22marginalia%22,%22display%22:%22standalone%22,%22start_url%22:%22.%22,%22background_color%22:%22%23EDE6D3%22,%22theme_color%22:%22%237A3B34%22}">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap');
   * { box-sizing: border-box; }
   body { margin: 0; }
 </style>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js" crossorigin></script>
 </head>
 <body>
 <div id="root"></div>
@@ -22,8 +22,14 @@ const { useState, useEffect } = React;
 
 // ---- EDIT THIS if your Worker URL changes ----
 const WORKER_BASE = window.location.origin;
+const DEMO = new URLSearchParams(window.location.search).get("demo") === "1";
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} },
+};
 
-// EDIT THIS if you ever need to rotate the key — restricted to Books API only in Google Cloud Console
+// EDIT THIS if you ever need to rotate the key, restricted to Books API only in Google Cloud Console
 const GOOGLE_BOOKS_API_KEY = "AIzaSyDHeqkQz3R1ZqyR2YXa2HsmA98uC6JXsNA";
 
 const COLORS = {
@@ -41,9 +47,9 @@ const MOCK_SHELF = [
 
 const MODES = [
   { key: "reading", title: "currently reading", tagline: "the book on your nightstand", auto: false, live: true },
-  { key: "custom", title: "any photo", tagline: "pets, art, family — anything you upload", auto: false, live: true },
+  { key: "custom", title: "any photo", tagline: "pets, art, family, anything you upload", auto: false, live: true },
   { key: "spotify", title: "now playing", tagline: "album art of whatever's playing on spotify", auto: true, live: true },
-  { key: "moon", title: "moon phase", tagline: "tonight's sky, calculated — no setup", auto: true, live: false },
+  { key: "moon", title: "moon phase", tagline: "tonight's sky, calculated, no setup", auto: true, live: false },
   { key: "weather", title: "today's weather", tagline: "your forecast, updates itself daily", auto: true, live: false },
   { key: "nasa", title: "this day in space", tagline: "NASA's picture of the day, try your birthday", auto: false, live: true },
 ];
@@ -147,20 +153,21 @@ async function searchBooks(q) {
 }
 
 function App() {
-  // A QR code can link straight to ?frame=FRAME02 — that takes priority
+  // A QR code can link straight to ?frame=FRAME02, that takes priority
   // over anything already remembered, so scanning a different unit's
   // sticker always switches to that frame.
   const urlFrame = new URLSearchParams(window.location.search).get("frame");
-  if (urlFrame && urlFrame.trim().length >= 4) {
-    localStorage.setItem("marginalia_frame_id", urlFrame.trim().toUpperCase());
+  if (!DEMO && urlFrame && urlFrame.trim().length >= 4) {
+    store.set("marginalia_frame_id", urlFrame.trim().toUpperCase());
   }
 
   const spotifyBack = new URLSearchParams(window.location.search).get("spotify");
   const [step, setStep] = useState(() => {
+    if (DEMO) return 1;
     if (spotifyBack === "connected") return 4;
-    return localStorage.getItem("marginalia_frame_id") ? 1 : 0;
+    return store.get("marginalia_frame_id") ? 1 : 0;
   });
-  const [frameId, setFrameId] = useState(() => localStorage.getItem("marginalia_frame_id") || "");
+  const [frameId, setFrameId] = useState(() => DEMO ? "DEMO" : (store.get("marginalia_frame_id") || ""));
   const [mode, setMode] = useState(spotifyBack === "connected" ? "spotify" : null);
   const [chosen, setChosen] = useState(spotifyBack === "connected" ? { title: "now playing", author: "spotify", art: <div style={{ textAlign: "center", fontSize: 54, color: COLORS.burgundy }}>♪</div> } : null);
   const [pushed, setPushed] = useState(false);
@@ -197,14 +204,14 @@ function App() {
     return () => { cancelled = true; };
   }, [debouncedQuery, method, mode]);
 
-  const submitFrameId = (e) => { e.preventDefault(); if (frameId.trim().length >= 4) { localStorage.setItem("marginalia_frame_id", frameId.trim()); setStep(1); } };
+  const submitFrameId = (e) => { e.preventDefault(); if (frameId.trim().length >= 4) { store.set("marginalia_frame_id", frameId.trim()); setStep(1); } };
   const goBack = () => {
     setPushErr("");
     if (step === 3) setStep(2);
     else if (step === 2 && mode === "reading" && method) { setMethod(null); setResults([]); setQuery(""); }
     else setStep(1);
   };
-  const forgetFrame = () => { localStorage.removeItem("marginalia_frame_id"); setFrameId(""); setStep(0); };
+  const forgetFrame = () => { store.del("marginalia_frame_id"); setFrameId(""); setStep(0); };
   const pickMode = (m) => { setMode(m.key); setChosen(null); setPushErr(""); setStep(2); };
   const pickBook = (book) => { setChosen({ title: book.title, author: book.author, thumb: book.thumb }); setStep(3); };
 
@@ -226,7 +233,7 @@ function App() {
       const code = wx.current.weather_code;
       setChosen({ title: `${temp}°  ·  ${weatherLabel(code)}`, author: `${place.name}, ${place.country_code || ""}`, art: <div style={{ textAlign: "center", fontFamily: "'Fraunces', serif", fontSize: 40, color: "#3E2E1F" }}>{weatherGlyph(code)}</div> });
       setStep(3);
-    } catch { setWeatherErr("couldn't find that city — try a different spelling"); }
+    } catch { setWeatherErr("couldn't find that city, try a different spelling"); }
     finally { setWeatherLoading(false); }
   };
 
@@ -238,7 +245,7 @@ function App() {
       if (data.media_type !== "image") throw new Error("video that day");
       setChosen({ title: data.title, author: data.date, thumb: data.url });
       setStep(3);
-    } catch { setNasaErr("no image for that date — NASA's demo key is also rate-limited, try again in a minute"); }
+    } catch { setNasaErr("no image for that date, NASA's demo key is also rate-limited, try again in a minute"); }
     finally { setNasaLoading(false); }
   };
 
@@ -289,9 +296,15 @@ function App() {
 
   const confirmPush = async () => {
     setPushErr("");
+    if (DEMO) {
+      // demo mode: pretend to send, never touch the backend or a real frame
+      setPushed(true);
+      setTimeout(() => setStep(4), 700);
+      return;
+    }
     if (mode === "custom") {
       if (!chosen.customBase64) {
-        setPushErr("something went wrong processing that photo — try choosing it again");
+        setPushErr("something went wrong processing that photo, try choosing it again");
         return;
       }
       setPushed(true);
@@ -305,12 +318,12 @@ function App() {
         setTimeout(() => setStep(4), 400);
       } catch {
         setPushed(false);
-        setPushErr("couldn't reach the backend — check the connection and try again");
+        setPushErr("couldn't reach the backend, check the connection and try again");
       }
       return;
     }
     if (!chosen.thumb) {
-      setPushErr("this mode doesn't have a real image yet — moon and weather need an image-generation step that isn't built. reading, NASA, and custom photo modes work for real right now.");
+      setPushErr("this mode doesn't have a real image yet, moon and weather need an image-generation step that isn't built. reading, NASA, and custom photo modes work for real right now.");
       return;
     }
     setPushed(true);
@@ -324,7 +337,7 @@ function App() {
       setTimeout(() => setStep(4), 400);
     } catch {
       setPushed(false);
-      setPushErr("couldn't reach the backend — check the connection and try again");
+      setPushErr("couldn't reach the backend, check the connection and try again");
     }
   };
 
@@ -349,7 +362,7 @@ function App() {
           <div>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}><EinkPreview empty /></div>
             <form onSubmit={submitFrameId}>
-              <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>your frame's code — on the sticker, or hold the key button to see it on screen</label>
+              <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>your frame's code, on the sticker, or hold the key button to see it on screen</label>
               <input value={frameId} onChange={(e) => setFrameId(e.target.value.toUpperCase())} placeholder="e.g.  A7X9K2" style={{ ...inputStyle, fontFamily: "'Fraunces', serif", fontSize: 18, letterSpacing: 2, padding: "14px 16px" }} />
               <button type="submit" disabled={frameId.trim().length < 4} style={{ ...btnStyle(frameId.trim().length >= 4), marginTop: 14 }}>continue</button>
             </form>
@@ -358,7 +371,7 @@ function App() {
 
         {step === 1 && (
           <div>
-            <p style={{ fontSize: 13, color: COLORS.faint, marginBottom: 18, textAlign: "center" }}>frame <b style={{ color: COLORS.ink }}>{frameId}</b> — what should it show?</p>
+            <p style={{ fontSize: 13, color: COLORS.faint, marginBottom: 18, textAlign: "center" }}>frame <b style={{ color: COLORS.ink }}>{frameId}</b>, what should it show?</p>
             {MODES.map((m) => (
               <button key={m.key} onClick={() => pickMode(m)} style={{ width: "100%", textAlign: "left", padding: "16px 18px", marginBottom: 10, background: "#FBF9F2", border: `1.5px solid ${COLORS.line}`, borderRadius: 5, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
@@ -406,7 +419,7 @@ function App() {
         {step === 2 && mode === "custom" && (
           <div style={{ textAlign: "center" }}>
             <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>
-              a photo of your pet, art, family — anything. it's resized to fit the frame automatically.
+              a photo of your pet, art, family, anything. it's resized to fit the frame automatically.
             </p>
             {customErr && <div style={{ fontSize: 12, color: COLORS.burgundy, marginBottom: 12 }}>{customErr}</div>}
             {!customPreview && (
@@ -434,13 +447,15 @@ function App() {
           <div style={{ textAlign: "center" }}>
             <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>connect once and the frame shows the album art of whatever's playing on your spotify. when nothing's playing it keeps the last thing you listened to.</p>
             {pushErr && <div style={{ fontSize: 12.5, color: COLORS.burgundy, marginBottom: 14, background: COLORS.paperDeep, padding: "10px 12px", borderRadius: 4 }}>{pushErr}</div>}
-            <a href={`${WORKER_BASE}/spotify/login/${frameId}`} target="_blank" rel="noopener" style={{ ...btnStyle(true), display: "block", boxSizing: "border-box", textDecoration: "none" }}>connect spotify</a>
+            {DEMO
+              ? <div style={{ fontSize: 13, color: COLORS.faint, background: COLORS.paperDeep, padding: "12px 14px", borderRadius: 4, lineHeight: 1.5 }}>spotify needs a real frame, so it's switched off in this demo. try "a book" or "any photo" instead.</div>
+              : <a href={`${WORKER_BASE}/spotify/login/${frameId}`} target="_blank" rel="noopener" style={{ ...btnStyle(true), display: "block", boxSizing: "border-box", textDecoration: "none" }}>connect spotify</a>}
           </div>
         )}
 
         {step === 2 && mode === "moon" && (
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>no setup needed — this one's calculated from tonight's date automatically.</p>
+            <p style={{ fontSize: 14, color: "#3A3B33", marginBottom: 20, lineHeight: 1.6 }}>no setup needed, this one's calculated from tonight's date automatically.</p>
             <button onClick={fetchMoon} style={btnStyle(true)}>show tonight's moon</button>
           </div>
         )}
@@ -456,7 +471,7 @@ function App() {
 
         {step === 2 && mode === "nasa" && (
           <div>
-            <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>a date (birthday, anniversary, today) — leave blank for today</label>
+            <label style={{ display: "block", fontSize: 12.5, color: COLORS.faint, marginBottom: 8 }}>a date (birthday, anniversary, today), leave blank for today</label>
             <input type="date" value={nasaDate} onChange={(e) => setNasaDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
             {nasaErr && <div style={{ fontSize: 12, color: COLORS.burgundy, marginBottom: 10 }}>{nasaErr}</div>}
             <button onClick={fetchNasa} disabled={nasaLoading} style={btnStyle(!nasaLoading)}>{nasaLoading ? "fetching…" : "find that day's image"}</button>
@@ -470,13 +485,13 @@ function App() {
             </div>
             {mode === "reading" && (
               <div style={{ textAlign: "left", marginBottom: 18 }}>
-                <label style={{ display: "block", fontSize: 12, color: COLORS.faint, marginBottom: 6 }}>a line worth keeping, so far — optional</label>
+                <label style={{ display: "block", fontSize: 12, color: COLORS.faint, marginBottom: 6 }}>a line worth keeping, so far, optional</label>
                 <textarea value={quote} onChange={(e) => setQuote(e.target.value.slice(0, 100))} placeholder='"..."' rows={2} style={{ ...inputStyle, fontFamily: "'Fraunces', serif", fontStyle: "italic", resize: "none" }} />
                 <div style={{ fontSize: 10.5, color: COLORS.faint, textAlign: "right", marginTop: 4 }}>{quote.length}/100</div>
               </div>
             )}
             {pushErr && <div style={{ fontSize: 12.5, color: COLORS.burgundy, marginBottom: 14, textAlign: "left", background: COLORS.paperDeep, padding: "10px 12px", borderRadius: 4 }}>{pushErr}</div>}
-            <p style={{ fontSize: 13, color: COLORS.faint, marginBottom: 20 }}>this is what frame <b style={{ color: COLORS.ink }}>{frameId}</b> will show — redraw takes about 15–30 seconds</p>
+            <p style={{ fontSize: 13, color: COLORS.faint, marginBottom: 20 }}>this is what frame <b style={{ color: COLORS.ink }}>{frameId}</b> will show, redraw takes about 15–30 seconds</p>
             <button onClick={confirmPush} disabled={pushed} style={{ ...btnStyle(!pushed), background: pushed ? COLORS.sage : COLORS.burgundy, marginBottom: 10 }}>{pushed ? "sending to frame…" : "set this"}</button>
             <button onClick={() => setStep(2)} style={{ width: "100%", padding: "12px 16px", fontSize: 13.5, border: "none", background: "transparent", color: COLORS.faint, cursor: "pointer", textDecoration: "underline" }}>choose something else</button>
           </div>
@@ -487,8 +502,8 @@ function App() {
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
               <EinkPreview cover={chosen.thumb} title={chosen.title} author={chosen.author} art={chosen.art} quote={mode === "reading" ? quote : null} />
             </div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.sage, marginBottom: 4 }}>{mode === "spotify" ? "spotify connected" : "sent to your frame"}</div>
-            <p style={{ fontSize: 12.5, color: COLORS.faint, marginBottom: 24, lineHeight: 1.5 }}>next time, skip the code — just open this from your home screen.</p>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.sage, marginBottom: 4 }}>{mode === "spotify" ? "spotify connected" : DEMO ? "that's it, this would now be on your frame" : "sent to your frame"}</div>
+            <p style={{ fontSize: 12.5, color: COLORS.faint, marginBottom: 24, lineHeight: 1.5 }}>{DEMO ? "demo only, nothing was sent anywhere." : "next time, skip the code, just open this from your home screen."}</p>
             <button onClick={reset} style={{ width: "100%", padding: "13px 16px", fontSize: 14, fontWeight: 600, border: `1.5px solid ${COLORS.burgundy}`, borderRadius: 4, background: "transparent", color: COLORS.burgundy, cursor: "pointer" }}>change mode or book</button>
           </div>
         )}
